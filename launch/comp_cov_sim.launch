@@ -17,9 +17,9 @@
 	</include>
 
     	<!-- Launch coverage node -->
-    	<node name="coverage_node" pkg="comp_cov_sim" type="coverage_node.py" output="screen">
+    	<!-- <node name="coverage_node" pkg="comp_cov_sim" type="coverage_node.py" output="screen">
 		<param name="robot_size" value="0.35"/>
 		<param name="robot_name" value="robot_0"/>
-	</node>
+	</node>-->
 </launch>
 

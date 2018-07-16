@@ -9,7 +9,7 @@
   
   <!-- Gazebo model spawner -->
   <node name="spawn_turtlebot_model" pkg="gazebo_ros" type="spawn_model"
-        args="$(arg initial_pose) -unpause -urdf -param robot_description -model $(arg robot_name)"/>
+        args="$(arg initial_pose) -unpause -urdf -param robot_description -model $(arg robot_name)" respawn="false" output="screen"/>
   
   <!-- Velocity muxer -->
   <node pkg="nodelet" type="nodelet" name="mobile_base_nodelet_manager" args="manager"/>

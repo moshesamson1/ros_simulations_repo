@@ -15,26 +15,26 @@
     <arg name="world_name" value="$(arg world_file)"/>
   </include>
   
-  <group ns="tobot_0">
-  	<param name="tf_prefix" value="robot1_tf"/>
-  	<include ns="robot_0" file="$(find comp_cov_sim)/launch/includes/kobuki.launch.xml">
+  <!--<group ns="tobot_0">
+  	<param name="tf_prefix" value="robot0_tf"/>
+  	<include file="$(find comp_cov_sim)/launch/includes/kobuki.launch.xml">
     		<arg name="base" value="$(arg base)"/>
     		<arg name="stacks" value="$(arg stacks)"/>
     		<arg name="3d_sensor" value="$(arg 3d_sensor)"/>
     		<arg name="initial_pose" value="-x 0 -y 0"/>
-    		<arg name="robot_name" value="robot_0"/>
+    		<arg name="robot_name" value="Robot_0"/>
   	</include>
-  </group>
+  </group> -->
 
   
-   <include ns="robot_1" file="$(find comp_cov_sim)/launch/includes/kobuki.launch.xml">
-    <arg name="base" value="$(arg base)"/>
-    <arg name="stacks" value="$(arg stacks)"/>
-    <arg name="3d_sensor" value="$(arg 3d_sensor)"/>
-    <arg name="initial_pose" value="-x 2 -y 2"/>
-    <arg name="robot_name" value="robot_1"/>
-  </include>
-  
+ 	  <include file="$(find comp_cov_sim)/launch/includes/kobuki.launch.xml">
+	    	<arg name="base" value="$(arg base)"/>
+   		<arg name="stacks" value="$(arg stacks)"/>
+		<arg name="3d_sensor" value="$(arg 3d_sensor)"/>
+		<arg name="initial_pose" value="-x 2 -y 2"/>
+    		<arg name="robot_name" value="robot_1"/>
+ 	 </include>
+ 
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
     <param name="publish_frequency" type="double" value="30.0" />
   </node>
