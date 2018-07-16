@@ -1,0 +1,3 @@
+The number of cells accessible from the robot initial position: 174
+# Covered cells: 428
+Total Coverage Time: 13.52
