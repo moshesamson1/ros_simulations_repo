@@ -10,16 +10,5 @@
 	<include file="$(find comp_cov_sim)/launch/world.launch">
 		<arg name="world_file" value="$(arg world_file)"/>	
 	</include>
-
-	<!-- Launch navigation stack with amcl -->
-	<include file="$(find comp_cov_sim)/launch/amcl_demo.launch">
-		<arg name="map_file" value="$(arg map_file)"/>
-	</include>
-
-    	<!-- Launch coverage node -->
-    	<!-- <node name="coverage_node" pkg="comp_cov_sim" type="coverage_node.py" output="screen">
-		<param name="robot_size" value="0.35"/>
-		<param name="robot_name" value="robot_0"/>
-	</node>-->
 </launch>
 

@@ -1,7 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <launch>
   <!-- Map server -->
   <arg name="map_file" default="$(env TURTLEBOT_GAZEBO_MAP_FILE)"/>
   <arg name="3d_sensor" default="$(env TURTLEBOT_3D_SENSOR)"/>  <!-- r200, kinect, asus_xtion_pro -->
+  <arg name="robot_name" default="NONE"/>
+  
 
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)">
    <!-- <param name="frame_id" value="/map"/>-->
@@ -19,11 +22,12 @@
     <arg name="initial_pose_a" value="$(arg initial_pose_a)"/>
     <arg name="use_map_topic" value="true"/>
     <arg name="global_frame_id" value="map"/> <!-- add / before map -->
+    <arg name="tf_prefix" value="$(arg robot_name)"/>
   </include>
 
   <!-- Move base -->
- <group ns="robot_0">
-   <param name="tf_prefix" value="robot0_tf"/>
+ <group ns="$(arg robot_name)">
+   <param name="tf_prefix" value="$(arg robot_name)_tf"/>
    <include file="$(find comp_cov_sim)/launch/move_base.launch.xml"/>
  </group>
 </launch>
