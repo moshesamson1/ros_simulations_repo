@@ -4,10 +4,10 @@
 
   <arg name="base"      value="$(optenv TURTLEBOT_BASE kobuki)"/> <!-- create, roomba -->
   <arg name="battery"   value="$(optenv TURTLEBOT_BATTERY /proc/acpi/battery/BAT0)"/>  <!-- /proc/acpi/battery/BAT0 --> 
-  <arg name="gui" default="true"/>
+  <arg name="gui" default="false"/>
   <arg name="stacks"    value="$(optenv TURTLEBOT_STACKS hexagons)"/>  <!-- circles, hexagons --> 
   <arg name="3d_sensor" value="$(optenv TURTLEBOT_3D_SENSOR kinect)"/>  <!-- kinect, asus_xtion_pro --> 
-  <arg name="map_file" value="/home/moshe/catkin_ws/src/comp_cov_sim/custom_maps/map.yaml"/>
+  <arg name="map_file" value="/home/samson_moshe/catkin_ws/src/comp_cov_sim/custom_maps/map.yaml"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="use_sim_time" value="true"/>
@@ -28,7 +28,9 @@
 
 	<!-- map node -->
 	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/>
-
+	
+	<node name="tf" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 /map /robot_0/odom 100"/>
+	
 	<!-- Launch coverage node -->
     	<node name="coverage_node" pkg="comp_cov_sim" type="coverage_node.py" output="screen">
 		<param name="robot_size" value="0.35"/>
@@ -55,6 +57,8 @@
 
 	<!-- map node -->
 	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/>
+	
+	<node name="tf" pkg="tf" type="static_transform_publisher" args="2 2 0 0 0 0 /map robot_1/odom 100" />
 
 	<!-- Launch coverage node -->
 	<node name="coverage_node" pkg="comp_cov_sim" type="coverage_node.py" output="screen">

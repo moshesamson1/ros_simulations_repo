@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch> 
 	<arg name="world_file"  default="/opt/ros/kinetic/share/turtlebot_gazebo/worlds/empty.world"/>
-	<arg name="map_file" value="/home/moshe/catkin_ws/src/comp_cov_sim/custom_maps/map.yaml"/>
+	<arg name="map_file" value="/home/samson_moshe/catkin_ws/src/comp_cov_sim/custom_maps/map.yaml"/>
 	<arg name="initial_pose_x" default="0.0"/>
 	<arg name="initial_pose_y" default="0.0"/>
     	<param name="/use_sim_time" value="true" />  
