@@ -357,7 +357,7 @@ def get_coverage_path_from_mst(mst, start):
 
 def move_blindly(last_d, new_d, distance):
     global robot_name, pub, sub
-    print "Moving " + new_d + "...",
+    print("(%s) Moving %s" % (robot_name, new_d)),
 
     rotation_angle_deg = 0
     if (last_d == 'W' and new_d == 'N') or (last_d == 'N' and new_d == 'E') or \
