@@ -19,6 +19,9 @@ import globals
 
 from Coverage import *
 
+# positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
+positions = []
+
 
 def pose_callback(pose_msg):
     # Keep track of robot position:
@@ -71,7 +74,8 @@ def move_blindly(last_d, new_d, distance):
 
 
 def open_position_file():
-    globals.position_file = open("%s_positions" % globals.robot_name, 'a', 0)
+    global positions_file
+
 
 
 def main():
@@ -89,7 +93,6 @@ def main():
         print "robot_name: {0}".format(globals.robot_name)
 
     open_position_file()
-    globals.absolute_path = os.path.dirname(os.path.realpath(__file__))
 
     # Publisher - context is inside namespace
     globals.pub = rospy.Publisher("mobile_base/commands/velocity", Twist, queue_size=10)
@@ -205,6 +208,9 @@ def main():
                 last_p = p
 
         finish_time = rospy.Time.now()
+        positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
+        positions_file.writelines(positions)
+        positions_file.close()
         #
         # # print statistics of this problem
         # with open("/home/moshe/catkin_ws/src/coverage_4/src/coverage_stat.txt", "w+") as stats_file:
@@ -219,18 +225,16 @@ def main():
     except rospy.ServiceException, e:
         rospy.logerr("Service call failed: %s" % e)
 
-    # print_map_to_file()
-
 
 def print_location():
+    global positions_file
     try:
         (trans, rot) = globals.tf_listener.lookupTransform("/map",
                                                            globals.robot_name + "/base_footprint",
                                                            rospy.Time(0))
         location = (trans[0], trans[1])
-        globals.position_file = open(globals.absolute_path + "/%s_positions.txt" % globals.robot_name, "a+")
-        globals.position_file.write("(%s) : %f,%f \n" % (globals.robot_name, location[0], location[1]))
 
+        positions.append("(%s) : %f,%f \n" % (globals.robot_name, location[0], location[1]))
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
         rospy.logerr("Service call failed: %s" % e)
 
