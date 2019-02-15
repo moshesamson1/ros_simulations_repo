@@ -227,10 +227,10 @@ def create_occupancy_grid(my_map):
     for i in xrange(my_map.info.height):
         for j in xrange(my_map.info.width):
             if my_map.data[i * my_map.info.width + j] == 0:
-                grid[i][j] = False
+                globals.gridgrid[i][j] = False
             else:
-                grid[i][j] = True
-    return grid
+                globals.gridgrid[i][j] = True
+    return globals.gridgrid
 
 
 def create_occupancy_grid_using_robot_size(my_map, robot_size):
@@ -240,8 +240,7 @@ def create_occupancy_grid_using_robot_size(my_map, robot_size):
     robot_map_size = int(math.ceil(robot_radius / my_map.info.resolution))
     print "robot_map_size: " + str(robot_map_size)
 
-    globals.grid = [[None] * int(math.ceil(my_map.info.width / robot_map_size)) for i in
-            xrange(int(math.ceil(my_map.info.height / robot_map_size)))]
+    globals.grid = [[None] * int(math.ceil(my_map.info.width / robot_map_size)) for _ in xrange(int(math.ceil(my_map.info.height / robot_map_size)))]
 
     print "****** grid size: {0} X {1}".format(len(globals.grid), len(globals.grid[0]))
 

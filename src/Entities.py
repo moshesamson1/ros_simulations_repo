@@ -15,14 +15,15 @@ class Slot:
 
     def GoLeft(self):
         return Slot(self.row, self.col - 1)
+
     def GoRight(self):
         return Slot(self.row, self.col + 1)
+
     def GoUp(self):
         return Slot(self.row - 1, self.col)
+
     def GoDown(self):
         return Slot(self.row + 1, self.col)
-
-
 
     def __str__(self):
         return str(int(self.row)) + "," +str(int(self.col))

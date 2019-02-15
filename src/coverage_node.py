@@ -32,23 +32,26 @@ def pose_callback(pose_msg):
 
 
 def move_blindly(last_d, new_d, distance):
-    print("(%s) Moving %s ..." % (globals.robot_name, new_d)),
+    print "(%s) Moving %s -> %s ..." % (globals.robot_name, last_d, new_d),
 
-    rotation_angle_deg = 0
+    # todo: use vectors to represent direction and compute angles
     if (last_d == 'W' and new_d == 'N') or (last_d == 'N' and new_d == 'E') or \
             (last_d == 'E' and new_d == 'S') or (last_d == 'S' and new_d == 'W'):
         rotation_angle_deg = 90
     elif (last_d == 'W' and new_d == 'S') or (last_d == 'S' and new_d == 'E') or \
             (last_d == 'E' and new_d == 'N') or (last_d == 'N' and new_d == 'W'):
         rotation_angle_deg = -90
-    else:
+    elif last_d == '~' or last_d == new_d:
         rotation_angle_deg = 0
+    else:
+        rospy.logerr("Wrong directions. trying to switch from %s to %s" % (last_d, new_d))
+        exit(-1)
 
     angle = np.deg2rad(rotation_angle_deg)
-    angle_vel = angle * 0.5
+    angle_vel = angle * 0.5  # angular speed
 
     move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.5  # speed
+    move_forward_msg.linear.x = 0.5  # directional speed
     rotate_msg = Twist()
     rotate_msg.angular.z = angle_vel
     stay_put_msg = Twist()
@@ -59,6 +62,7 @@ def move_blindly(last_d, new_d, distance):
         globals.pub.publish(rotate_msg)
         t1 = rospy.Time.now().to_sec()
         current_angle = angle_vel * (t1 - t0)
+
     globals.pub.publish(stay_put_msg)
 
     current_distance = 0.0
@@ -73,31 +77,24 @@ def move_blindly(last_d, new_d, distance):
     print "Done."
 
 
-def open_position_file():
-    global positions_file
-
-
-
 def main():
     rospy.init_node('coverage_node', argv=sys.argv)
-    starting_location = (0, 0)
     globals.robot_size = 0.35  # meters!
     globals.robot_name = ''
 
     # get initial parameters from launch file:
     if rospy.has_param('~robot_size'):
-        rospy.loginfo("has robot size!")
+        globals.robot_size = float(rospy.get_param('~robot_size'))
 
     if rospy.has_param('~robot_name'):
         globals.robot_name = rospy.get_param('~robot_name')
-        print "robot_name: {0}".format(globals.robot_name)
 
-    open_position_file()
+    if rospy.has_param('~init_pos'):
+        str_pos = rospy.get_param('~init_pos').split()
+        globals.init_pos = (float(str_pos[0]), float(str_pos[1]))
 
-    # Publisher - context is inside namespace
+        # Publisher - context is inside namespace
     globals.pub = rospy.Publisher("mobile_base/commands/velocity", Twist, queue_size=10)
-
-    # print_topics()
 
     # Listener for pose
     globals.sub = rospy.Subscriber(globals.robot_name + "/pose", Pose, pose_callback)
@@ -117,22 +114,23 @@ def main():
         globals.tf_listener = tf.TransformListener()
         globals.tf_listener.waitForTransform('/map', globals.robot_name + "/base_footprint", rospy.Time(0), rospy.Duration(10))
 
-        # # compute robot initial position in grid
-        # starting_location_grid = (int(math.floor(
-        #     (starting_location[1] - response.map.info.origin.position.y) / robot_size)),
-        #                           int(math.floor(
-        #                               (starting_location[0] - response.map.info.origin.position.x) / robot_size))
-        # )
+        # compute robot initial position in grid
+        # todo: re-compute initial positions in the grid -> current computation is wrong!
+        starting_location_grid = (int(math.floor(
+            (response.map.info.origin.position.y - globals.init_pos[1]) / globals.robot_size)),
+                                  int(math.floor(
+                                      (globals.init_pos[0] - response.map.info.origin.position.x) / globals.robot_size))
+        )
 
-        starting_location_grid = (len(globals.grid)/2, len(globals.grid[0])/2)
-        print "starting location grid: " + str(starting_location_grid)
+        print "(%s) init pos: %s" % (globals.robot_name, str(globals.init_pos))
+        print "(%s) starting location grid: %s" % (globals.robot_name, str(starting_location_grid))
 
         # switch to coarse grid cell, each cell of size 4D
         switch_to_coarse_grid()
 
         # find free initial location in the coarse grid
         starting_location_coarse_grid = (starting_location_grid[0] / 2, starting_location_grid[1] / 2)
-        print "starting location coarse grid: " + str(starting_location_coarse_grid)
+        # print "starting location coarse grid: " + str(starting_location_coarse_grid)
         if globals.coarse_grid[starting_location_coarse_grid[0]][starting_location_coarse_grid[1]]:
             rospy.loginfo("Original Starting location is occupied! Finding the closest free starting location...")
 
@@ -157,57 +155,28 @@ def main():
         # get coverage path in the fine grid. using the mst of the coarse grid
         path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
 
-        # use send_goals code, create mini-plan for each move, then moving the robot through that plan
+        # ~~~
         last_p = path[0]
-        if last_p.GoUp() == path[1]:
-            last_d = 'N'
-        elif last_p.GoRight() == path[1]:
-            last_d = 'E'
-        elif last_p.GoDown() == path[1]:
-            last_d = 'S'
-        else:
-            last_d = 'W'
+        last_d = '~'
 
         begin_time = rospy.Time.now()
-        covered_cells_count = 0
-
-
         # move the robot along the coverage path
         for p in path:
-            # Check if going along the same path as before, and stop only when changing direction, then call send_goals
-            # if (last_d == 'N' and last_p.GoUp() == p) or \
-            #         (last_d == 'E' and last_p.GoRight() == p) or \
-            #         (last_d == 'S' and last_p.GoDown() == p) or \
-            #         (last_d == 'W' and last_p.GoLeft() == p):
-            #     last_p = p
-            #     covered_cells_count += 1
-            #     print "continue..."
-            #     continue
-            # else:
-                new_d = ""
-                if last_p.GoUp() == p:
-                    new_d = 'N'
-                elif last_p.GoRight() == p:
-                    new_d = 'E'
-                elif last_p.GoDown() == p:
-                    new_d = 'S'
-                else:
-                    new_d = 'W'
+            if last_p.GoUp() == p:
+                new_d = 'N'
+            elif last_p.GoRight() == p:
+                new_d = 'E'
+            elif last_p.GoDown() == p:
+                new_d = 'S'
+            else:
+                new_d = 'W'
 
-                # print "%s -- X: %d, Y: %d" % (robot_name, int(last_p.col * robot_size + response.map.info.origin.position.x),
-                #                                 int(last_p.row * robot_size + response.map.info.origin.position.y))
-
-                move_blindly(last_d, new_d, globals.robot_size)
-                print_location()
-                last_d = new_d
-
-                # succeeded = send_goals(
-                #     int(last_p.col * robot_size + response.map.info.origin.position.x),
-                #     int(last_p.row * robot_size + response.map.info.origin.position.y))
-
-                last_p = p
+            move_blindly(last_d, new_d, globals.robot_size)
+            print_location()
+            last_d, last_p = new_d, p
 
         finish_time = rospy.Time.now()
+
         positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
         positions_file.writelines(positions)
         positions_file.close()
