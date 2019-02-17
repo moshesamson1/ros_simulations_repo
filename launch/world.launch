@@ -9,10 +9,10 @@
   <arg name="map_file" value="../catkin_ws/src/comp_cov_sim/custom_maps/map.yaml"/>
   <arg name="robot_0_name" default="robot_0"/>
   <arg name="robot_1_name" default="robot_1"/>
-  <arg name="0_x" default="-6.9"/>
-  <arg name="0_y" default="-5.9"/>
-  <arg name="1_x" default="4.3"/>
-  <arg name="1_y" default="3.2"/>
+  <arg name="0_x" default="0.0"/>
+  <arg name="0_y" default="0.0"/>
+  <arg name="1_x" default="11.2"/>
+  <arg name="1_y" default="9.1"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="use_sim_time" value="true"/>
