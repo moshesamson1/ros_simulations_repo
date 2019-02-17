@@ -151,7 +151,15 @@ def main():
         # create spanning tree of robot\
 
         coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
-        print coarse_grid_edges
+        # print coarse_grid_edges
+        # if (12,15) in [i[0] for i in coarse_grid_edges]:
+        #     print "found key!"
+        # else:
+        #     print "key not found!"
+        #     for p,v in coarse_grid_edges:
+        #         print p,
+        #         print v
+        #     exit()
         coarse_grid_graph = create_graph(coarse_grid_edges)
         # for p in coarse_grid_graph.keys():
         #     print p,

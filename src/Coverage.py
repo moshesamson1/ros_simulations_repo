@@ -314,10 +314,10 @@ def get_edges_from_grid(_grid):
     :rtype: list
     """
     edges = []
-    for row in xrange(0, len(_grid) - 1):
-        for col in xrange(0, len(_grid[0]) - 1):
-            if not _grid[row][col + 1]: edges.append(((row, col), (row, col + 1)))
-            if not _grid[row + 1][col]: edges.append(((row, col), (row + 1, col)))
+    for row in xrange(0, len(_grid)):
+        for col in xrange(0, len(_grid[0])):
+            if col + 1 < len(_grid[0]) and not _grid[row][col + 1]: edges.append(((row, col), (row, col + 1)))
+            if row + 1 < len(_grid) and not _grid[row + 1][col]: edges.append(((row, col), (row + 1, col)))
 
     return edges
 
