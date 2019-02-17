@@ -227,10 +227,10 @@ def create_occupancy_grid(my_map):
     for i in xrange(my_map.info.height):
         for j in xrange(my_map.info.width):
             if my_map.data[i * my_map.info.width + j] == 0:
-                globals.gridgrid[i][j] = False
+                globals.grid[i][j] = False
             else:
-                globals.gridgrid[i][j] = True
-    return globals.gridgrid
+                globals.grid[i][j] = True
+    return globals.grid
 
 
 def create_occupancy_grid_using_robot_size(my_map, robot_size):
@@ -254,6 +254,8 @@ def create_occupancy_grid_using_robot_size(my_map, robot_size):
                 if occupied_sub_cell_found: break
                 for col in xrange(j, j + robot_map_size):
                     if my_map.data[row * my_map.info.width + col] > 0:
+                        print "Should not reach this position. map should be totally free!"
+                        exit(-2)
                         globals.grid[i / robot_map_size][j / robot_map_size] = True
                         occupied_sub_cell_found = True
                         break
@@ -261,7 +263,6 @@ def create_occupancy_grid_using_robot_size(my_map, robot_size):
 
 
 def switch_to_coarse_grid():
-    print "switch_to_coarse_grid"
     orig_grid_rows = len(globals.grid)
     orig_grid_cols = len(globals.grid[0])
     globals.coarse_grid = [[None] * (orig_grid_cols / 2) for _ in xrange(orig_grid_rows / 2)]

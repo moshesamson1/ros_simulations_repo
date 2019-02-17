@@ -91,7 +91,7 @@ def main():
 
     if rospy.has_param('~init_pos'):
         str_pos = rospy.get_param('~init_pos').split()
-        globals.init_pos = (float(str_pos[0]), float(str_pos[1]))
+        globals.init_pos = (float(str_pos[0]), float(str_pos[1])) # which coordinates?
 
         # Publisher - context is inside namespace
     globals.pub = rospy.Publisher("mobile_base/commands/velocity", Twist, queue_size=10)
@@ -115,41 +115,47 @@ def main():
         globals.tf_listener.waitForTransform('/map', globals.robot_name + "/base_footprint", rospy.Time(0), rospy.Duration(10))
 
         # compute robot initial position in grid
-        # todo: re-compute initial positions in the grid -> current computation is wrong!
-        starting_location_grid = (int(math.floor(
-            (response.map.info.origin.position.y - globals.init_pos[1]) / globals.robot_size)),
-                                  int(math.floor(
-                                      (globals.init_pos[0] - response.map.info.origin.position.x) / globals.robot_size))
+        starting_location = get_location()
+        starting_location_grid = \
+            (int(math.floor((starting_location[1] - response.map.info.origin.position.y) / globals.robot_size)),
+             int(math.floor((starting_location[0] - response.map.info.origin.position.x) / globals.robot_size))
         )
 
         print "(%s) init pos: %s" % (globals.robot_name, str(globals.init_pos))
+        print "(%s) starting location: %s" % (globals.robot_name, str(starting_location))
         print "(%s) starting location grid: %s" % (globals.robot_name, str(starting_location_grid))
 
         # switch to coarse grid cell, each cell of size 4D
         switch_to_coarse_grid()
 
         # find free initial location in the coarse grid
-        starting_location_coarse_grid = (starting_location_grid[0] / 2, starting_location_grid[1] / 2)
-        # print "starting location coarse grid: " + str(starting_location_coarse_grid)
-        if globals.coarse_grid[starting_location_coarse_grid[0]][starting_location_coarse_grid[1]]:
-            rospy.loginfo("Original Starting location is occupied! Finding the closest free starting location...")
-
-            # perform bfs over all edges, then get the first one which isn't occupied
-            starting_location_coarse_grid = get_free_starting_location(globals.coarse_grid, starting_location_coarse_grid)
-            rospy.loginfo("starting location coarse grid: " + str(starting_location_coarse_grid))
+        starting_location_coarse_grid =  int((starting_location_grid[0]-1)/ 2.0), int((starting_location_grid[1]-1)/ 2.0)
+        print "starting_location_coarse_grid: " + str(starting_location_coarse_grid)
+        print "coarse grid size: %f,%f" %  (len(globals.coarse_grid), len(globals.coarse_grid[0]))
+        # if globals.coarse_grid[starting_location_coarse_grid[0]][starting_location_coarse_grid[1]]:
+        #     rospy.loginfo("Original Starting location is occupied! Finding the closest free starting location...")
+        #
+        #     # perform bfs over all edges, then get the first one which isn't occupied
+        #     starting_location_coarse_grid = get_free_starting_location(globals.coarse_grid, starting_location_coarse_grid)
+        #     rospy.loginfo("starting location coarse grid: " + str(starting_location_coarse_grid))
 
         # Find all the free cells that are reachable from the robot's initial position and ignore all the other cells.
-        reachable_cells_coarse_grid = get_reachable_cells(globals.coarse_grid, starting_location_coarse_grid)
+        #reachable_cells_coarse_grid = get_reachable_cells(globals.coarse_grid, starting_location_coarse_grid)
 
         # Make sure all unreachable cells considered as occupied.
-        for row in xrange(len(globals.coarse_grid)):
-            for col in xrange(len(globals.coarse_grid[0])):
-                if (row, col) not in reachable_cells_coarse_grid:
-                    globals.coarse_grid[row][col] = True
+        # for row in xrange(len(globals.coarse_grid)):
+        #     for col in xrange(len(globals.coarse_grid[0])):
+        #         if (row, col) not in reachable_cells_coarse_grid:
+        #             globals.coarse_grid[row][col] = True
 
-        # create spanning tree of robot
+        # create spanning tree of robot\
+
         coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
+        print coarse_grid_edges
         coarse_grid_graph = create_graph(coarse_grid_edges)
+        # for p in coarse_grid_graph.keys():
+        #     print p,
+        #     print coarse_grid_graph[p]
         coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
 
         # get coverage path in the fine grid. using the mst of the coarse grid
@@ -197,16 +203,19 @@ def main():
 
 def print_location():
     global positions_file
+    location = get_location()
+    positions.append("(%s) : %f,%f \n" % (globals.robot_name, location[0], location[1]))
+
+
+def get_location():
     try:
         (trans, rot) = globals.tf_listener.lookupTransform("/map",
                                                            globals.robot_name + "/base_footprint",
                                                            rospy.Time(0))
-        location = (trans[0], trans[1])
-
-        positions.append("(%s) : %f,%f \n" % (globals.robot_name, location[0], location[1]))
+        location = (float(trans[0]), float(trans[1]))
+        return location
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
         rospy.logerr("Service call failed: %s" % e)
-
 
 def print_topics():
     for k, v in rospy.get_published_topics():
