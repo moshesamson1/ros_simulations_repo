@@ -72,12 +72,15 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
             print "ERROR!!!"
             return
 
-        # remove after finishing debugging
-        # if slot in covering_path:
-        #    print "slot already in! Check parameters"
-
         covering_path.append(slot)
-        shallow_slot = Entities.Slot(math.floor(slot.row / 2.0), math.floor(slot.col / 2.0))
+        if slot == initial_slot:
+            # todo: fix error in initalization. check for corners!
+            shallow_slot = Entities.Slot(int((slot.row-1)/ 2.0), int((slot.col-1)/ 2.0))
+        else:
+            shallow_slot = Entities.Slot(math.floor(slot.row / 2.0), math.floor(slot.col / 2.0))
+
+        # shallow_slot = Entities.Slot(int((slot.row-1)/ 2.0), int((slot.col-1)/ 2.0))
+        print "(%s) shallow slot: %s(%s)" % (globals.robot_name, shallow_slot, slot)
         # find to where to go next, depend on the mst edges.
         # Check how much and which corners are in the mst group, then update slot accordingly
 
@@ -137,7 +140,7 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
 
         last_slot = covering_path[len(covering_path) - 2]
 
-        # check o see if only one vertex was in the mst
+        # check to see if only one vertex was in the mst
         if br_corner_in_mst and not (ur_corner_in_mst or bl_corner_in_mst or ul_corner_in_mst):
             if slot.GoDown() == last_slot or slot == last_slot:
                 slot = slot.GoRight()
@@ -158,6 +161,7 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
                 slot = slot.GoLeft()
             elif slot.GoLeft() == last_slot:
                 slot = slot.GoUp()
+
         # check to see if exactly two vertices are in the mst
         elif bl_corner_in_mst and br_corner_in_mst and not (ul_corner_in_mst or ur_corner_in_mst):
             if slot.GoLeft() == last_slot or slot == initial_slot:
@@ -181,6 +185,7 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
                 slot = slot.GoDown()
             elif slot.GoDown() == last_slot:
                 slot = slot.GoUp()
+
         # check for exactly 3 vertices
         elif br_corner_in_mst and bl_corner_in_mst and ul_corner_in_mst and not ur_corner_in_mst:
             if slot.GoUp() == last_slot or slot == initial_slot:
@@ -204,10 +209,15 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
                 slot = slot.GoUp()
         else:
             print "error has occured!"
+            print "bl_corner_in_mst: %s" % bl_corner_in_mst
+            print "br_corner_in_mst: %s" % br_corner_in_mst
+            print "ul_corner_in_mst: %s" % ul_corner_in_mst
+            print "ur_corner_in_mst: %s" % ur_corner_in_mst
+            exit()
 
         if slot == origin_slot:
             break
-
+    # print "(%s) covering path: %s" % (globals.robot_name, str(covering_path))
     return covering_path
 
 
