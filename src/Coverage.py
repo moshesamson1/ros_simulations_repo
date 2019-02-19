@@ -73,14 +73,13 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
             return
 
         covering_path.append(slot)
-        if slot == initial_slot:
-            # todo: fix error in initalization. check for corners!
-            shallow_slot = Entities.Slot(int((slot.row-1)/ 2.0), int((slot.col-1)/ 2.0))
-        else:
-            shallow_slot = Entities.Slot(math.floor(slot.row / 2.0), math.floor(slot.col / 2.0))
+        # if slot == initial_slot:
+        #     shallow_slot = Entities.Slot(int((slot.row-1) / 2.0), int((slot.col-1) / 2.0))
+        # else:
+        shallow_slot = Entities.Slot(math.floor(slot.row / 2.0), math.floor(slot.col / 2.0))
 
         # shallow_slot = Entities.Slot(int((slot.row-1)/ 2.0), int((slot.col-1)/ 2.0))
-        print "(%s) shallow slot: %s(%s)" % (globals.robot_name, shallow_slot, slot)
+        # print "(%s) shallow slot: %s(%s)" % (globals.robot_name, shallow_slot, slot)
         # find to where to go next, depend on the mst edges.
         # Check how much and which corners are in the mst group, then update slot accordingly
 
@@ -264,7 +263,7 @@ def create_occupancy_grid_using_robot_size(my_map, robot_size):
                 if occupied_sub_cell_found: break
                 for col in xrange(j, j + robot_map_size):
                     if my_map.data[row * my_map.info.width + col] > 0:
-                        print "Should not reach this position. map should be totally free!"
+                        print "ERROR: Map file contains obstacles!"
                         exit(-2)
                         globals.grid[i / robot_map_size][j / robot_map_size] = True
                         occupied_sub_cell_found = True

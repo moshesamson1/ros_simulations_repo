@@ -134,7 +134,6 @@ def main():
         print "(%s) starting_location_coarse_grid: %s" % (globals.robot_name ,str(starting_location_coarse_grid))
         print "(%s) coarse grid size: %f,%f" %  (globals.robot_name, len(globals.coarse_grid), len(globals.coarse_grid[0]))
 
-
         coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
         coarse_grid_graph = create_graph(coarse_grid_edges)
         coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
