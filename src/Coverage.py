@@ -73,13 +73,8 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
             return
 
         covering_path.append(slot)
-        # if slot == initial_slot:
-        #     shallow_slot = Entities.Slot(int((slot.row-1) / 2.0), int((slot.col-1) / 2.0))
-        # else:
         shallow_slot = Entities.Slot(math.floor(slot.row / 2.0), math.floor(slot.col / 2.0))
 
-        # shallow_slot = Entities.Slot(int((slot.row-1)/ 2.0), int((slot.col-1)/ 2.0))
-        # print "(%s) shallow slot: %s(%s)" % (globals.robot_name, shallow_slot, slot)
         # find to where to go next, depend on the mst edges.
         # Check how much and which corners are in the mst group, then update slot accordingly
 

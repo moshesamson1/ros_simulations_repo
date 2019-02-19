@@ -31,7 +31,7 @@ def pose_callback(pose_msg):
     return
 
 
-def move_blindly(last_d, new_d, distance):
+def move_blindly(last_d, new_d, distance, percentage):
     print "(%s) Moving %s -> %s ..." % (globals.robot_name, last_d, new_d),
 
     # todo: use vectors to represent direction and compute angles
@@ -74,7 +74,7 @@ def move_blindly(last_d, new_d, distance):
 
     globals.pub.publish(stay_put_msg)
 
-    print "Done."
+    print "Done. %f" % percentage
 
 
 def main():
@@ -91,7 +91,8 @@ def main():
 
     if rospy.has_param('~init_pos'):
         str_pos = rospy.get_param('~init_pos').split()
-        globals.init_pos = float("{0:.2f}".format(float(str_pos[0]))), float("{0:.2f}".format(float(str_pos[1]))) # which coordinates?
+        globals.init_pos = float("{0:.2f}".format(float(str_pos[0]))), float(
+            "{0:.2f}".format(float(str_pos[1])))  # which coordinates?
 
         # Publisher - context is inside namespace
     globals.pub = rospy.Publisher("mobile_base/commands/velocity", Twist, queue_size=10)
@@ -112,15 +113,15 @@ def main():
         print "(%s) before tf" % globals.robot_name
         # find robot's position
         globals.tf_listener = tf.TransformListener()
-        globals.tf_listener.waitForTransform('/map', globals.robot_name + "/base_footprint", rospy.Time(0), rospy.Duration(10))
+        globals.tf_listener.waitForTransform('/map', globals.robot_name + "/base_footprint", rospy.Time(0),
+                                             rospy.Duration(10))
         print "(%s) after tf" % globals.robot_name
 
         # compute robot initial position in grid
         starting_location = get_location()
         starting_location_grid = \
             (int(math.floor((starting_location[1] - response.map.info.origin.position.y) / globals.robot_size)),
-             int(math.floor((starting_location[0] - response.map.info.origin.position.x) / globals.robot_size))
-        )
+             int(math.floor((starting_location[0] - response.map.info.origin.position.x) / globals.robot_size)))
 
         print "(%s) init pos: %s" % (globals.robot_name, str(globals.init_pos))
         print "(%s) starting location: %s" % (globals.robot_name, str(starting_location))
@@ -130,9 +131,11 @@ def main():
         switch_to_coarse_grid()
 
         # find free initial location in the coarse grid
-        starting_location_coarse_grid =  int((starting_location_grid[0]-1)/ 2.0), int((starting_location_grid[1]-1)/ 2.0)
-        print "(%s) starting_location_coarse_grid: %s" % (globals.robot_name ,str(starting_location_coarse_grid))
-        print "(%s) coarse grid size: %f,%f" %  (globals.robot_name, len(globals.coarse_grid), len(globals.coarse_grid[0]))
+        starting_location_coarse_grid = int((starting_location_grid[0] - 1) / 2.0), int(
+            (starting_location_grid[1] - 1) / 2.0)
+        print "(%s) starting_location_coarse_grid: %s" % (globals.robot_name, str(starting_location_coarse_grid))
+        print "(%s) coarse grid size: %f,%f" % (
+        globals.robot_name, len(globals.coarse_grid), len(globals.coarse_grid[0]))
 
         coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
         coarse_grid_graph = create_graph(coarse_grid_edges)
@@ -149,7 +152,9 @@ def main():
         # move the robot along the coverage path
         # ignore first step of the path, as it is the starting position
 
-        for p in path[1:]:
+        for p_ind in xrange(1, len(path)):
+            p = path[p_ind]
+
             if last_p.GoUp() == p:
                 new_d = 'N'
             elif last_p.GoRight() == p:
@@ -159,7 +164,7 @@ def main():
             else:
                 new_d = 'W'
 
-            move_blindly(last_d, new_d, globals.robot_size)
+            move_blindly(last_d, new_d, globals.robot_size, float(p_ind) / float(len(path)))
             print_location()
             last_d, last_p = new_d, p
 
@@ -189,6 +194,7 @@ def get_location():
         return location
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
         rospy.logerr("Service call failed: %s" % e)
+
 
 def print_topics():
     for k, v in rospy.get_published_topics():
