@@ -33,6 +33,37 @@ def pose_callback(pose_msg):
     return
 
 
+def move(last_d, new_d, distance, percentage, use_map=True):
+    if not use_map:
+        move_blindly(last_d, new_d, percentage)
+    else:
+        move_smartly(last_d, new_d, percentage)
+
+
+def move_smartly(last_d, new_d, distance, percentage):
+    print "(%s) Moving %s -> %s ..." % (globals.robot_name, last_d, new_d),
+
+    # todo: use vectors to represent direction and compute angles
+    if (last_d == 'W' and new_d == 'N') or (last_d == 'N' and new_d == 'E') or \
+            (last_d == 'E' and new_d == 'S') or (last_d == 'S' and new_d == 'W'):
+        rotation_angle_deg = 90
+    elif (last_d == 'W' and new_d == 'S') or (last_d == 'S' and new_d == 'E') or \
+            (last_d == 'E' and new_d == 'N') or (last_d == 'N' and new_d == 'W'):
+        rotation_angle_deg = -90
+    elif last_d == '~' or last_d == new_d:
+        rotation_angle_deg = 0
+    else:
+        rospy.logerr("Wrong directions. trying to switch from %s to %s" % (last_d, new_d))
+        exit(-1)
+
+    angle = np.deg2rad(rotation_angle_deg)
+
+    turn_toward(get_euler_orientation()[2] + angle)
+    move_toward()
+
+    print "Done. %f" % percentage
+
+
 def move_blindly(last_d, new_d, distance, percentage):
     print "(%s) Moving %s -> %s ..." % (globals.robot_name, last_d, new_d),
 
@@ -188,6 +219,10 @@ def set_orientation(target_orientation_z):
     print "*** set_orientation ***"
     turn_toward(target_orientation_z)
 
+
+def move_toward():
+    #todo: implement this!
+    pass
 
 def turn_toward(target_orientation_z, eps=0.1):
     rotate_msg_pos = Twist()
