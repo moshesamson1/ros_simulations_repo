@@ -8,6 +8,8 @@
 
 import sys
 import numpy as np
+import time
+import math
 import os
 
 import rospy
@@ -117,6 +119,9 @@ def main():
                                              rospy.Duration(10))
         print "(%s) after tf" % globals.robot_name
 
+        # point robot to the correct direction
+        set_orientation(0.0)
+
         # compute robot initial position in grid
         starting_location = get_location()
         starting_location_grid = \
@@ -126,6 +131,7 @@ def main():
         print "(%s) init pos: %s" % (globals.robot_name, str(globals.init_pos))
         print "(%s) starting location: %s" % (globals.robot_name, str(starting_location))
         print "(%s) starting location grid: %s" % (globals.robot_name, str(starting_location_grid))
+
 
         # switch to coarse grid cell, each cell of size 4D
         switch_to_coarse_grid()
@@ -178,10 +184,42 @@ def main():
         rospy.logerr("Service call failed: %s" % e)
 
 
+def set_orientation(target_orientation_z):
+    print "*** set_orientation ***"
+    turn_toward(target_orientation_z)
+
+
+def turn_toward(target_orientation_z, eps=0.1):
+    rotate_msg_pos = Twist()
+    rotate_msg_pos.angular.z = 0.005
+
+    rotate_msg_neg = Twist()
+    rotate_msg_neg.angular.z = -0.005
+
+    stay_put_msg = Twist()
+    counter = 0
+    current_angle = np.rad2deg(get_euler_orientation()[2])
+
+    while math.fabs(current_angle - target_orientation_z) > eps and counter < 20:
+        globals.pub.publish(rotate_msg_pos if current_angle < target_orientation_z else rotate_msg_neg)
+        current_angle = np.rad2deg(get_euler_orientation()[2])
+        print "     (%s)rotation euler (deg): %s" % (globals.robot_name, current_angle)
+
+    globals.pub.publish(stay_put_msg)
+
+
 def print_location():
     global positions_file
     location = get_location()
     positions.append("(%s) : %f,%f \n" % (globals.robot_name, location[0], location[1]))
+
+
+def get_euler_orientation():
+    (_, rot_quat) = globals.tf_listener.lookupTransform("/map",
+                                                           globals.robot_name + "/base_footprint",
+                                                           rospy.Time(0))
+    rot_euler = tf.transformations.euler_from_quaternion(rot_quat)
+    return rot_euler
 
 
 def get_location():
@@ -189,6 +227,7 @@ def get_location():
         (trans, rot) = globals.tf_listener.lookupTransform("/map",
                                                            globals.robot_name + "/base_footprint",
                                                            rospy.Time(0))
+        print "(%s)rotation: %s" % (globals.robot_name, rot)
         location = (float("{0:.2f}".format(float(trans[0]))), float("{0:.2f}".format(float(trans[1]))))
 
         return location
