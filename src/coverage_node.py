@@ -7,20 +7,16 @@
 #
 
 import sys
-import numpy as np
-import time
-import math
-import os
 
+import numpy as np
 import rospy
 import tf
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
 from turtlesim.msg import Pose
-from Entities import Orientation, Direction, deprecated
-import globals
 
 from Coverage import *
+from Entities import Direction, deprecated
 
 # positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
 positions = []
@@ -45,13 +41,13 @@ def move_smartly(last_d, new_d, distance, percentage):
     print "(%s) Moving %s -> %s ..." % (globals.robot_name, last_d, new_d),
 
     # todo: use vectors to represent direction and compute angles
-    if (last_d == 'W' and new_d == 'N') or (last_d == 'N' and new_d == 'E') or \
-            (last_d == 'E' and new_d == 'S') or (last_d == 'S' and new_d == 'W'):
+    if (last_d == Direction.W and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.E) or \
+            (last_d == Direction.E and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.W):
         rotation_angle_deg = 90
-    elif (last_d == 'W' and new_d == 'S') or (last_d == 'S' and new_d == 'E') or \
-            (last_d == 'E' and new_d == 'N') or (last_d == 'N' and new_d == 'W'):
+    elif (last_d == Direction.W and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.E) or \
+            (last_d == Direction.E and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.W):
         rotation_angle_deg = -90
-    elif last_d == '~' or last_d == new_d:
+    elif last_d == Direction.Z or last_d == new_d:
         rotation_angle_deg = 0
     else:
         rospy.logerr("Wrong directions. trying to switch from %s to %s" % (last_d, new_d))
@@ -59,13 +55,13 @@ def move_smartly(last_d, new_d, distance, percentage):
 
     angle = np.deg2rad(rotation_angle_deg)
 
-    if new_d == 'N':
+    if new_d == Direction.N:
         direction = Direction.N
-    elif new_d == 'E':
+    elif new_d == Direction.E:
         direction = Direction.E
-    elif new_d == 'S':
+    elif new_d == Direction.S:
         direction = Direction.S
-    elif new_d == 'W':
+    elif new_d == Direction.W:
         direction = Direction.W
 
     turn_toward(get_euler_orientation()[2] + angle)
@@ -79,13 +75,13 @@ def move_blindly(last_d, new_d, distance, percentage):
     print "(%s) Moving %s -> %s ..." % (globals.robot_name, last_d, new_d),
 
     # todo: use vectors to represent direction and compute angles
-    if (last_d == 'W' and new_d == 'N') or (last_d == 'N' and new_d == 'E') or \
-            (last_d == 'E' and new_d == 'S') or (last_d == 'S' and new_d == 'W'):
+    if (last_d == Direction.W and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.E) or \
+            (last_d == Direction.E and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.W):
         rotation_angle_deg = 90
-    elif (last_d == 'W' and new_d == 'S') or (last_d == 'S' and new_d == 'E') or \
-            (last_d == 'E' and new_d == 'N') or (last_d == 'N' and new_d == 'W'):
+    elif (last_d == Direction.W and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.E) or \
+            (last_d == Direction.E and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.W):
         rotation_angle_deg = -90
-    elif last_d == '~' or last_d == new_d:
+    elif last_d == Direction.Z or last_d == new_d:
         rotation_angle_deg = 0
     else:
         rospy.logerr("Wrong directions. trying to switch from %s to %s" % (last_d, new_d))
@@ -192,7 +188,7 @@ def main():
 
         # ~~~
         last_p = path[0]
-        last_d = '~'
+        last_d = Direction.Z
 
         begin_time = rospy.Time.now()
         # move the robot along the coverage path
@@ -202,13 +198,13 @@ def main():
             p = path[p_ind]
 
             if last_p.GoUp() == p:
-                new_d = 'N'
+                new_d = Direction.N
             elif last_p.GoRight() == p:
-                new_d = 'E'
+                new_d = Direction.E
             elif last_p.GoDown() == p:
-                new_d = 'S'
+                new_d = Direction.S
             else:
-                new_d = 'W'
+                new_d = Direction.W
 
             percentage = float(p_ind) / float(len(path))
             move(last_d, new_d, percentage=percentage, use_map=True)

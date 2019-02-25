@@ -1,6 +1,7 @@
-import warnings
 import functools
+import warnings
 from enum import Enum
+
 
 class Slot:
     def __init__(self, x, y):
@@ -47,6 +48,7 @@ class Direction(Enum):
     E = 1
     S = 2
     W = 3
+    Z = 5
 
 
 def deprecated(func):
