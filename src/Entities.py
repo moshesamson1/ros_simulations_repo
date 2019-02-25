@@ -1,3 +1,7 @@
+import warnings
+import functools
+from enum import Enum
+
 class Slot:
     def __init__(self, x, y):
         self.row = x
@@ -30,3 +34,31 @@ class Slot:
 
     def __repr__(self):
         return str(self)
+
+
+class Orientation:
+    def __init__(self):
+        self.Horizontal = 0
+        self.Vertical = 1
+
+
+class Direction(Enum):
+    N = 0
+    E = 1
+    S = 2
+    W = 3
+
+
+def deprecated(func):
+    """This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used."""
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+        warnings.warn("Call to deprecated function {}.".format(func.__name__),
+                      category=DeprecationWarning,
+                      stacklevel=2)
+        warnings.simplefilter('default', DeprecationWarning)  # reset filter
+        return func(*args, **kwargs)
+    return new_func

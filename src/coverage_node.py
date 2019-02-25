@@ -17,6 +17,7 @@ import tf
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
 from turtlesim.msg import Pose
+from Entities import Orientation, Direction, deprecated
 import globals
 
 from Coverage import *
@@ -33,11 +34,11 @@ def pose_callback(pose_msg):
     return
 
 
-def move(last_d, new_d, distance, percentage, use_map=True):
+def move(last_d, new_d, distance=0.0, percentage=0.0, use_map=True):
     if not use_map:
-        move_blindly(last_d, new_d, percentage)
+        move_blindly(last_d, new_d, distance, percentage)
     else:
-        move_smartly(last_d, new_d, percentage)
+        move_smartly(last_d, new_d, distance, percentage)
 
 
 def move_smartly(last_d, new_d, distance, percentage):
@@ -58,12 +59,22 @@ def move_smartly(last_d, new_d, distance, percentage):
 
     angle = np.deg2rad(rotation_angle_deg)
 
+    if new_d == 'N':
+        direction = Direction.N
+    elif new_d == 'E':
+        direction = Direction.E
+    elif new_d == 'S':
+        direction = Direction.S
+    elif new_d == 'W':
+        direction = Direction.W
+
     turn_toward(get_euler_orientation()[2] + angle)
-    move_toward()
+    move_toward((10.0, 10.0), direction)  # check!
 
     print "Done. %f" % percentage
 
 
+@deprecated
 def move_blindly(last_d, new_d, distance, percentage):
     print "(%s) Moving %s -> %s ..." % (globals.robot_name, last_d, new_d),
 
@@ -124,8 +135,7 @@ def main():
 
     if rospy.has_param('~init_pos'):
         str_pos = rospy.get_param('~init_pos').split()
-        globals.init_pos = float("{0:.2f}".format(float(str_pos[0]))), float(
-            "{0:.2f}".format(float(str_pos[1])))  # which coordinates?
+        globals.init_pos = float(str_pos[0]), float(str_pos[1])
 
         # Publisher - context is inside namespace
     globals.pub = rospy.Publisher("mobile_base/commands/velocity", Twist, queue_size=10)
@@ -137,12 +147,12 @@ def main():
     rospy.wait_for_service('static_map')
     try:
         get_static_map = rospy.ServiceProxy('static_map', GetMap)
-        response = get_static_map()
+        globals.response = get_static_map()
         rospy.loginfo("Received a width %d X height %d map @ %.3f m/px" % (
-            response.map.info.width, response.map.info.height, response.map.info.resolution))
-        rospy.loginfo("position: " + str(response.map.info.origin.position))
+            globals.response.map.info.width, globals.response.map.info.height, globals.response.map.info.resolution))
+        rospy.loginfo("position: " + str(globals.response.map.info.origin.position))
 
-        create_occupancy_grid_using_robot_size(response.map, globals.robot_size)
+        create_occupancy_grid_using_robot_size(globals.response.map, globals.robot_size)
         print "(%s) before tf" % globals.robot_name
         # find robot's position
         globals.tf_listener = tf.TransformListener()
@@ -156,13 +166,12 @@ def main():
         # compute robot initial position in grid
         starting_location = get_location()
         starting_location_grid = \
-            (int(math.floor((starting_location[1] - response.map.info.origin.position.y) / globals.robot_size)),
-             int(math.floor((starting_location[0] - response.map.info.origin.position.x) / globals.robot_size)))
+            (int(math.floor((starting_location[1] - globals.response.map.info.origin.position.y) / globals.robot_size)),
+             int(math.floor((starting_location[0] - globals.response.map.info.origin.position.x) / globals.robot_size)))
 
         print "(%s) init pos: %s" % (globals.robot_name, str(globals.init_pos))
         print "(%s) starting location: %s" % (globals.robot_name, str(starting_location))
         print "(%s) starting location grid: %s" % (globals.robot_name, str(starting_location_grid))
-
 
         # switch to coarse grid cell, each cell of size 4D
         switch_to_coarse_grid()
@@ -201,8 +210,9 @@ def main():
             else:
                 new_d = 'W'
 
-            move_blindly(last_d, new_d, globals.robot_size, float(p_ind) / float(len(path)))
-            print_location()
+            percentage = float(p_ind) / float(len(path))
+            move(last_d, new_d, percentage=percentage, use_map=True)
+            # print_location()
             last_d, last_p = new_d, p
 
         finish_time = rospy.Time.now()
@@ -220,9 +230,33 @@ def set_orientation(target_orientation_z):
     turn_toward(target_orientation_z)
 
 
-def move_toward():
-    #todo: implement this!
-    pass
+def move_toward(target_position, direction, eps=0.1):
+    # type: (tuple, Direction, float) -> None
+    """
+    moving from current location to specific location, in a straight line
+    :param target_position:
+    :param direction:
+    :param eps:
+    :return:
+    """
+
+    move_forward_msg = Twist()
+    move_forward_msg.linear.x = 0.5
+
+    stay_put_msg = Twist()
+
+    current_location = get_location()
+
+    # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
+    index = 0 if direction == Direction.N or direction == Direction.S else 1
+
+    while math.fabs(world_to_grid_location(current_location)[index] - target_position[index]) > eps:
+        globals.pub.publish(move_forward_msg)
+        current_location = get_location()
+        # time.sleep(0.25)
+
+    globals.pub.publish(stay_put_msg)
+
 
 def turn_toward(target_orientation_z, eps=0.1):
     rotate_msg_pos = Twist()
@@ -232,13 +266,12 @@ def turn_toward(target_orientation_z, eps=0.1):
     rotate_msg_neg.angular.z = -0.005
 
     stay_put_msg = Twist()
-    counter = 0
     current_angle = np.rad2deg(get_euler_orientation()[2])
 
-    while math.fabs(current_angle - target_orientation_z) > eps and counter < 20:
+    while math.fabs(current_angle - target_orientation_z) > eps:
         globals.pub.publish(rotate_msg_pos if current_angle < target_orientation_z else rotate_msg_neg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
-        print "     (%s)rotation euler (deg): %s" % (globals.robot_name, current_angle)
+        # print "     (%s)rotation euler (deg): %s" % (globals.robot_name, current_angle)
 
     globals.pub.publish(stay_put_msg)
 
@@ -258,21 +291,25 @@ def get_euler_orientation():
 
 
 def get_location():
+    """
+    :return: The robots location, in base coordinates
+    """
     try:
-        (trans, rot) = globals.tf_listener.lookupTransform("/map",
+        (trans, _) = globals.tf_listener.lookupTransform("/map",
                                                            globals.robot_name + "/base_footprint",
                                                            rospy.Time(0))
-        print "(%s)rotation: %s" % (globals.robot_name, rot)
-        location = (float("{0:.2f}".format(float(trans[0]))), float("{0:.2f}".format(float(trans[1]))))
-
+        location = (trans[0], trans[1])
+        print "location: %s --> %s" % (str(location), str(world_to_grid_location(location)))
         return location
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
         rospy.logerr("Service call failed: %s" % e)
 
 
-def print_topics():
-    for k, v in rospy.get_published_topics():
-        print k + "  -->  " + v
+def world_to_grid_location(world_location):
+    grid_location = \
+        (int(math.floor((world_location[1] - globals.response.map.info.origin.position.y) / globals.robot_size)),
+         int(math.floor((world_location[0] - globals.response.map.info.origin.position.x) / globals.robot_size)))
+    return grid_location
 
 
 if __name__ == "__main__":
