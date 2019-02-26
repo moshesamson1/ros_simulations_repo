@@ -36,6 +36,26 @@ class Slot:
     def __repr__(self):
         return str(self)
 
+    def __getitem__(self, item):
+        if item == 0:
+            return self.row
+        elif item == 1:
+            return self.col
+        else:
+            raise IndexError()
+
+    def GoByDirection(self, direction):
+        # type: (Direction) -> Slot
+
+        if direction == Direction.N:
+            return self.GoUp()
+        elif direction == Direction.E:
+            return self.GoRight()
+        elif direction == Direction.S:
+            return self.GoDown()
+        elif direction == Direction.W:
+            return self.GoLeft()
+
 
 class Orientation:
     def __init__(self):
