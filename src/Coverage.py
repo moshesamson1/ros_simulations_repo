@@ -1,7 +1,9 @@
-from random import shuffle
 import math
-import Entities
+from random import shuffle
+
 import rospy
+
+import Entities
 import globals
 
 
@@ -242,6 +244,7 @@ def create_occupancy_grid_using_robot_size(my_map, robot_size):
 
     robot_radius = robot_size
     robot_map_size = int(math.ceil(robot_radius / my_map.info.resolution))
+    globals.robot_map_size = robot_map_size
     print "robot_map_size: " + str(robot_map_size)
 
     globals.grid = [[None] * int(math.ceil(my_map.info.width / robot_map_size)) for _ in xrange(int(math.ceil(my_map.info.height / robot_map_size)))]
