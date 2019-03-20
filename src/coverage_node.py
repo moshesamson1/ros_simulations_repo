@@ -10,7 +10,6 @@ import sys
 from random import seed
 
 import numpy as np
-import rospy
 import tf
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
