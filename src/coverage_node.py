@@ -14,6 +14,7 @@ import tf
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
 from turtlesim.msg import Pose
+import rospy
 
 from Coverage import *
 from Entities import Direction, deprecated
@@ -168,47 +169,50 @@ def main():
         switch_to_coarse_grid()
         print "(%s) angle switch_to_coarse_grid set: %s" % (globals.robot_name, np.rad2deg(get_euler_orientation()[2]))
 
-        # find free initial location in the coarse grid
         starting_location_coarse_grid = int((starting_location_grid[0] - 1) / 2.0), int(
             (starting_location_grid[1] - 1) / 2.0)
         print "(%s) starting_location_coarse_grid: %s" % (globals.robot_name, str(starting_location_coarse_grid))
-        print "(%s) coarse grid size: %f,%f" % (
-        globals.robot_name, len(globals.coarse_grid), len(globals.coarse_grid[0]))
 
-        coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
-        coarse_grid_graph = create_graph(coarse_grid_edges)
-        coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
+        move_toward_correct_direction(Entities.Slot(1,0), Direction.N, 90.0)
 
-        # get coverage path in the fine grid. using the mst of the coarse grid
-        path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
+        location = get_location()
+        location_grid = world_to_grid_location(get_location())
+        print("After moving to (0,1). Location: %s , Grid: %s" % (location, location_grid))
 
-        # ~~~
-        last_p = path[0]
-        last_d = DIRECTION_Z
-
-        # move the robot along the coverage path
-        # ignore first step of the path, as it is the starting position
-
-        for p_ind in xrange(1, len(path)):
-            p = path[p_ind]
-
-            if last_p.GoUp() == p:
-                new_d = Direction.N
-            elif last_p.GoRight() == p:
-                new_d = Direction.E
-            elif last_p.GoDown() == p:
-                new_d = Direction.S
-            else:
-                new_d = Direction.W
-
-            percentage = float(p_ind) / float(len(path))
-            move(last_d, new_d, percentage=percentage, use_map=True)
-            # print_location()
-            last_d, last_p = new_d, p
-
-        positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
-        positions_file.writelines(positions)
-        positions_file.close()
+        # coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
+        # coarse_grid_graph = create_graph(coarse_grid_edges)
+        # coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
+        #
+        # # get coverage path in the fine grid. using the mst of the coarse grid
+        # path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
+        #
+        # # ~~~
+        # last_p = path[0]
+        # last_d = DIRECTION_Z
+        #
+        # # move the robot along the coverage path
+        # # ignore first step of the path, as it is the starting position
+        #
+        # for p_ind in xrange(1, len(path)):
+        #     p = path[p_ind]
+        #
+        #     if last_p.GoUp() == p:
+        #         new_d = Direction.N
+        #     elif last_p.GoRight() == p:
+        #         new_d = Direction.E
+        #     elif last_p.GoDown() == p:
+        #         new_d = Direction.S
+        #     else:
+        #         new_d = Direction.W
+        #
+        #     percentage = float(p_ind) / float(len(path))
+        #     move(last_d, new_d, percentage=percentage, use_map=True)
+        #     # print_location()
+        #     last_d, last_p = new_d, p
+        #
+        # positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
+        # positions_file.writelines(positions)
+        # positions_file.close()
 
     except rospy.ServiceException, e:
         rospy.logerr("Service call failed: %s" % e)
@@ -228,8 +232,8 @@ def get_parameters():
 
     if rospy.has_param('~robot_name'):
         globals.robot_name = rospy.get_param('~robot_name')
-        if globals.robot_name == 'robot_1':
-            exit(2)
+        # if globals.robot_name == 'robot_1':
+        #     exit(2)
 
     if rospy.has_param('~init_pos'):
         str_pos = rospy.get_param('~init_pos').split()
@@ -242,8 +246,42 @@ def set_orientation(target_orientation_z):
     print "Done."
 
 
-def move_toward(target_position, direction, eps=0.1):
-    # type: (Entities.Slot, Direction, float) -> None
+def move_toward_correct_direction(target_position, direction, target_orientation_z, eps = 0.01):
+    # type: (Entities.Slot, Direction, float, float) -> None
+    move_forward_msg = Twist()
+    move_forward_msg.linear.x = 0.05
+    stay_put_msg = Twist()
+
+    current_location = get_location()
+    # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
+    index = 0 if direction == Direction.N or direction == Direction.S else 1
+    while world_to_grid_location(current_location)[index] != float(target_position[index]):
+        # correct coarse
+        turn_toward(target_orientation_z, eps)
+
+        # move one unit forward
+        globals.pub.publish(move_forward_msg)
+        current_location = get_location()
+
+        grid_position = world_to_grid_location(current_location)
+        print "(%s) current_location: %s, :  grid position: %s" % (globals.robot_name, current_location, grid_position)
+        try:
+            assert round(grid_position[0]) >= 0
+            assert round(grid_position[1]) >= 0
+            assert round(grid_position[0]) <= 99
+            assert round(grid_position[1]) <= 99
+        except:
+            print "ERROR: "
+            print(grid_position)
+            exit(-1)
+        # counter += 1
+
+    globals.pub.publish(stay_put_msg)
+    print "Done."
+
+@deprecated
+def move_toward(target_position, direction):
+    # type: (Entities.Slot, Direction) -> None
     """
     moving from current location to specific location, in a straight line. Always move forward, after robot was rotated.
     :param target_position:
@@ -253,37 +291,35 @@ def move_toward(target_position, direction, eps=0.1):
     """
     print "(%s) move_toward" % globals.robot_name
     move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.5
-
+    move_forward_msg.linear.x = 0.05
     stay_put_msg = Twist()
 
     current_location = get_location()
 
     # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
-    counter = 0
-    index = 0 if direction == Direction.N or direction == Direction.S else 1
-    while math.fabs(world_to_grid_location(current_location)[index] - target_position[index]) > eps:
+    index = 1 if direction == Direction.N or direction == Direction.S else 0
+    while world_to_grid_location(current_location)[index] != float(target_position[index]):
         globals.pub.publish(move_forward_msg)
-        current_location = get_location()\
+        current_location = get_location()
 
+        print "(%s) current_location: %s, target_location:  %s" % (globals.robot_name, current_location, target_position)
         grid_position = world_to_grid_location(current_location)
-        # print "(%s) grid_position: %s" % (globals.robot_name, grid_position)
-        assert grid_position[0] >= 0
-        assert grid_position[1] >= 0
-        assert grid_position[0] <= 99
-        assert grid_position[1] <= 99
+        try:
+            assert round(grid_position[0]) >= 0
+            assert round(grid_position[1]) >= 0
+            assert round(grid_position[0]) <= 99
+            assert round(grid_position[1]) <= 99
+        except:
+            print "ERROR: "
+            print(grid_position)
+            exit(-1)
         # counter += 1
-
-        # if counter >= 10000:
-        #     print "+++(%s)target_position: %s" % (globals.robot_name, target_position)
-        #     print "+++(%s)direction: %s" % (globals.robot_name, direction)
-        #     exit(-1)
 
     globals.pub.publish(stay_put_msg)
     print "Done."
 
 
-def turn_toward(target_orientation_z, eps=0.1):
+def turn_toward(target_orientation_z, eps=0.01):
     """
     Turn toward specific location
     :param target_orientation_z: target to turn to, IN DEGREES!
@@ -360,8 +396,19 @@ def world_to_grid_location(world_location):
     # grid_x = int(math.floor((globals.response.map.info.height - (world_location[1] - globals.response.map.info.origin.position.y)) / globals.robot_size))
     # grid_y = int(math.floor((world_location[0] - globals.response.map.info.origin.position.x) / globals.robot_size))
 
-    grid_x = int(math.floor(world_location[1] / globals.robot_map_size))
-    grid_y = int(math.floor(world_location[0] / globals.robot_map_size))
+    # todo: check changing from floor to round!
+    grid_x = int(round(world_location[1] / globals.robot_map_size))
+    grid_y = int(round(world_location[0] / globals.robot_map_size))
+
+    try:
+        assert grid_x >= 0
+        assert  grid_y >= 0
+    except:
+        print "Error in world_to_grid_location"
+        print grid_x
+        print grid_y
+        print world_location
+        exit(2)
 
     grid_location = (grid_x, grid_y)
     return grid_location
