@@ -274,6 +274,34 @@ def is_world_in_grid_slot(s, index, eps=0.01):
         s.col - (world_location[0] / 2.0)) <= eps
 
 
+def grid_to_world(target_position):
+    # type: (Entities.Slot) -> tuple
+    return (target_position.col * 2.0, target_position.row * 2.0)
+
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+
+def angle_between(v1, v2):
+    """
+    :type (tuple, tuple) -> float
+    :param v1:
+    :param v2:
+    :return:
+    """
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 def move_toward_correct_direction(target_position, direction, target_orientation_z, eps = 0.01):
     # type: (Entities.Slot, Direction, float, float) -> None
@@ -281,19 +309,23 @@ def move_toward_correct_direction(target_position, direction, target_orientation
     move_forward_msg.linear.x = 0.025
     stay_put_msg = Twist()
 
-    current_location = get_location()
     # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
     index = 0 if (direction == Direction.N or direction == Direction.S) else 1
-    while not is_world_in_grid_slot(target_position, index,
-                                    eps):  # world_to_grid_location(current_location)[index] != float(target_position[index]):
-        # todo: check orientation every X steps, to make sure we are headed toward the correct position. Correct heading if needed!
-
+    while not is_world_in_grid_slot(target_position, index, eps):
         # move one unit forward
         Globals.pub.publish(move_forward_msg)
         current_location = get_location()
 
+        # todo: check orientation every X steps, to make sure we are headed toward the correct position. Correct heading if needed!
+        # create vector from current location to target location
+        # target_as_world = grid_to_world(target_position)
+        # target_v = (current_location[0] - target_as_world[0], current_location[1] - target_as_world[1])
+        # x_v,  y_v = (1.0, 0.0), (0.0, 1.0)
+        # print "correction angle: %s ---- %s" % (np.rad2deg(angle_between(x_v, target_v)),
+        #                                         np.rad2deg(angle_between(y_v, target_v)))
+
         grid_position = world_to_grid_location(current_location)
-        print "(%s) current_location: %s, :  grid position: %s" % (Globals.robot_name, current_location, grid_position)
+        # print "(%s) current_location: %s, :  grid position: %s" % (Globals.robot_name, current_location, grid_position)
         try:
             assert round(grid_position[0]) >= 0
             assert round(grid_position[1]) >= 0
