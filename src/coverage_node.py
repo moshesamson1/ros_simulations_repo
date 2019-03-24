@@ -13,8 +13,8 @@ import numpy as np
 import tf
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
+from tf import transformations
 from turtlesim.msg import Pose
-import rospy
 
 from Coverage import *
 from Entities import Direction, deprecated
@@ -154,7 +154,8 @@ def main():
         print "(%s) after tf" % globals.robot_name
 
         # point robot to the correct direction
-        set_orientation(90.0)
+        # set_orientation(90.0)
+        set_orientation(0.0)
         print "(%s) angle after orientation set: %s" % (globals.robot_name, np.rad2deg(get_euler_orientation()[2]))
 
         # compute robot initial position in grid
@@ -173,11 +174,28 @@ def main():
             (starting_location_grid[1] - 1) / 2.0)
         print "(%s) starting_location_coarse_grid: %s" % (globals.robot_name, str(starting_location_coarse_grid))
 
-        move_toward_correct_direction(Entities.Slot(1,0), Direction.N, 90.0)
-
+        move_toward_correct_direction(Entities.Slot(0, 1), Direction.E, 0.0)
         location = get_location()
-        location_grid = world_to_grid_location(get_location())
+        location_grid = world_to_grid_location(location)
         print("After moving to (0,1). Location: %s , Grid: %s" % (location, location_grid))
+
+        set_orientation(90.0)
+        move_toward_correct_direction(Entities.Slot(2, 1), Direction.N, 90.0)
+        location = get_location()
+        location_grid = world_to_grid_location(location)
+        print("After moving to (1,1). Location: %s , Grid: %s" % (location, location_grid))
+
+        set_orientation(179.5)
+        move_toward_correct_direction(Entities.Slot(2, 0), Direction.W, 179.5)
+        location = get_location()
+        location_grid = world_to_grid_location(location)
+        print("After moving to (1,0). Location: %s , Grid: %s" % (location, location_grid))
+
+        set_orientation(-90.0)
+        move_toward_correct_direction(Entities.Slot(0, 0), Direction.S, -90.0)
+        location = get_location()
+        location_grid = world_to_grid_location(location)
+        print("After moving to (0,0). Location: %s , Grid: %s" % (location, location_grid))
 
         # coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
         # coarse_grid_graph = create_graph(coarse_grid_edges)
@@ -232,8 +250,6 @@ def get_parameters():
 
     if rospy.has_param('~robot_name'):
         globals.robot_name = rospy.get_param('~robot_name')
-        # if globals.robot_name == 'robot_1':
-        #     exit(2)
 
     if rospy.has_param('~init_pos'):
         str_pos = rospy.get_param('~init_pos').split()
@@ -246,18 +262,26 @@ def set_orientation(target_orientation_z):
     print "Done."
 
 
+def is_world_in_grid_slot(s, index, eps=0.01):
+    # type: (Entities.Slot, int, float) -> bool
+    world_location = get_location()
+    return math.fabs(s.row - (world_location[1] / 2.0)) <= eps if index == 0 else math.fabs(
+        s.col - (world_location[0] / 2.0)) <= eps
+
+
+
 def move_toward_correct_direction(target_position, direction, target_orientation_z, eps = 0.01):
     # type: (Entities.Slot, Direction, float, float) -> None
     move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.05
+    move_forward_msg.linear.x = 0.025
     stay_put_msg = Twist()
 
     current_location = get_location()
     # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
-    index = 0 if direction == Direction.N or direction == Direction.S else 1
-    while world_to_grid_location(current_location)[index] != float(target_position[index]):
-        # correct coarse
-        turn_toward(target_orientation_z, eps)
+    index = 0 if (direction == Direction.N or direction == Direction.S) else 1
+    while not is_world_in_grid_slot(target_position, index,
+                                    eps):  # world_to_grid_location(current_location)[index] != float(target_position[index]):
+        # todo: check orientation every X steps, to make sure we are headed toward the correct position. Correct heading if needed!
 
         # move one unit forward
         globals.pub.publish(move_forward_msg)
@@ -271,10 +295,9 @@ def move_toward_correct_direction(target_position, direction, target_orientation
             assert round(grid_position[0]) <= 99
             assert round(grid_position[1]) <= 99
         except:
-            print "ERROR: "
+            print "Assertion Error: value out of range!"
             print(grid_position)
             exit(-1)
-        # counter += 1
 
     globals.pub.publish(stay_put_msg)
     print "Done."
@@ -319,7 +342,7 @@ def move_toward(target_position, direction):
     print "Done."
 
 
-def turn_toward(target_orientation_z, eps=0.01):
+def turn_toward(target_orientation_z, eps=0.1):
     """
     Turn toward specific location
     :param target_orientation_z: target to turn to, IN DEGREES!
@@ -330,10 +353,10 @@ def turn_toward(target_orientation_z, eps=0.01):
     print "(%s) turning toward %s" % (globals.robot_name, target_orientation_z)
 
     rotate_msg_pos = Twist()
-    rotate_msg_pos.angular.z = 0.005
+    rotate_msg_pos.angular.z = 0.05
 
     rotate_msg_neg = Twist()
-    rotate_msg_neg.angular.z = -0.005
+    rotate_msg_neg.angular.z = -0.05
 
     stay_put_msg = Twist()
     current_angle = np.rad2deg(get_euler_orientation()[2])
@@ -341,9 +364,7 @@ def turn_toward(target_orientation_z, eps=0.01):
     while math.fabs(current_angle - target_orientation_z) > eps:
         globals.pub.publish(rotate_msg_pos if current_angle < target_orientation_z else rotate_msg_neg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
-        # print "     (%s)rotation euler (deg): %s" % (globals.robot_name, current_angle)
 
-    globals.pub.publish(stay_put_msg)
     globals.pub.publish(stay_put_msg)
 
 
@@ -374,8 +395,8 @@ def get_location():
                                                            globals.robot_name + "/base_footprint",
                                                            rospy.Time(0))
 
-        location = (int(trans[0]) if too_small_reminder(trans[0]) else trans[0],
-                    int(trans[1]) if too_small_reminder(trans[1]) else trans[1])
+        location = (round(trans[0]) if too_small_reminder(trans[0]) else trans[0],
+                    round(trans[1]) if too_small_reminder(trans[1]) else trans[1])
 
         if location[0] < -1:
             print "location < -1"
@@ -397,8 +418,8 @@ def world_to_grid_location(world_location):
     # grid_y = int(math.floor((world_location[0] - globals.response.map.info.origin.position.x) / globals.robot_size))
 
     # todo: check changing from floor to round!
-    grid_x = int(round(world_location[1] / globals.robot_map_size))
-    grid_y = int(round(world_location[0] / globals.robot_map_size))
+    grid_x = int(round(world_location[1] / 2.0))
+    grid_y = int(round(world_location[0] / 2.0))
 
     try:
         assert grid_x >= 0
