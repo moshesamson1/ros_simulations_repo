@@ -178,24 +178,28 @@ def main():
         location = get_location()
         location_grid = world_to_grid_location(location)
         print("After moving to (0,1). Location: %s , Grid: %s" % (location, location_grid))
+        log_location_info()
 
         set_orientation(90.0)
         move_toward_correct_direction(Entities.Slot(2, 1), Direction.N, 90.0)
         location = get_location()
         location_grid = world_to_grid_location(location)
         print("After moving to (1,1). Location: %s , Grid: %s" % (location, location_grid))
+        log_location_info()
 
         set_orientation(179.5)
         move_toward_correct_direction(Entities.Slot(2, 0), Direction.W, 179.5)
         location = get_location()
         location_grid = world_to_grid_location(location)
         print("After moving to (1,0). Location: %s , Grid: %s" % (location, location_grid))
+        log_location_info()
 
         set_orientation(-90.0)
         move_toward_correct_direction(Entities.Slot(0, 0), Direction.S, -90.0)
         location = get_location()
         location_grid = world_to_grid_location(location)
         print("After moving to (0,0). Location: %s , Grid: %s" % (location, location_grid))
+        log_location_info()
 
         # coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
         # coarse_grid_graph = create_graph(coarse_grid_edges)
@@ -228,9 +232,9 @@ def main():
         #     # print_location()
         #     last_d, last_p = new_d, p
         #
-        # positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
-        # positions_file.writelines(positions)
-        # positions_file.close()
+        positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
+        positions_file.writelines(positions)
+        positions_file.close()
 
     except rospy.ServiceException, e:
         rospy.logerr("Service call failed: %s" % e)
@@ -368,10 +372,10 @@ def turn_toward(target_orientation_z, eps=0.1):
     globals.pub.publish(stay_put_msg)
 
 
-def print_location():
-    global positions_file
+def log_location_info():
     location = get_location()
-    positions.append("(%s) : %f,%f \n" % (globals.robot_name, location[0], location[1]))
+    grid_location = world_to_grid_location(location)
+    positions.append("(%s) : %f,%f -> %s \n" % (globals.robot_name, location[0], location[1], grid_location))
 
 
 def get_euler_orientation():
