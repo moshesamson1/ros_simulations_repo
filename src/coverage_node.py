@@ -181,6 +181,7 @@ def main():
         print("After moving to (0,1). Location: %s , Grid: %s" % (location, location_grid))
         log_location_info()
 
+        print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 90.0))
         set_orientation(90.0)
         move_toward_correct_direction(Entities.Slot(2, 1), Direction.N, 90.0)
         location = get_location()
@@ -188,6 +189,7 @@ def main():
         print("After moving to (1,1). Location: %s , Grid: %s" % (location, location_grid))
         log_location_info()
 
+        print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 179.5))
         set_orientation(179.5)
         move_toward_correct_direction(Entities.Slot(2, 0), Direction.W, 179.5)
         location = get_location()
@@ -195,6 +197,7 @@ def main():
         print("After moving to (1,0). Location: %s , Grid: %s" % (location, location_grid))
         log_location_info()
 
+        print(angle_diff(np.rad2deg(get_euler_orientation()[2]), -90.0))
         set_orientation(-90.0)
         move_toward_correct_direction(Entities.Slot(0, 0), Direction.S, -90.0)
         location = get_location()
@@ -303,6 +306,7 @@ def angle_between(v1, v2):
     v2_u = unit_vector(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
+
 def move_toward_correct_direction(target_position, direction, target_orientation_z, eps = 0.01):
     # type: (Entities.Slot, Direction, float, float) -> None
     move_forward_msg = Twist()
@@ -316,25 +320,20 @@ def move_toward_correct_direction(target_position, direction, target_orientation
         Globals.pub.publish(move_forward_msg)
         current_location = get_location()
 
-        # todo: check orientation every X steps, to make sure we are headed toward the correct position. Correct heading if needed!
-        # create vector from current location to target location
-        # target_as_world = grid_to_world(target_position)
-        # target_v = (current_location[0] - target_as_world[0], current_location[1] - target_as_world[1])
-        # x_v,  y_v = (1.0, 0.0), (0.0, 1.0)
-        # print "correction angle: %s ---- %s" % (np.rad2deg(angle_between(x_v, target_v)),
-        #                                         np.rad2deg(angle_between(y_v, target_v)))
+        # correct orientation every single whole unit of map
+        if current_location[1 if (direction == Direction.N or direction == Direction.S) else 0] % 1.0 < 0.05:
+            turn_toward(target_orientation_z)
 
-        grid_position = world_to_grid_location(current_location)
-        # print "(%s) current_location: %s, :  grid position: %s" % (Globals.robot_name, current_location, grid_position)
-        try:
-            assert round(grid_position[0]) >= 0
-            assert round(grid_position[1]) >= 0
-            assert round(grid_position[0]) <= 99
-            assert round(grid_position[1]) <= 99
-        except:
-            print "Assertion Error: value out of range!"
-            print(grid_position)
-            exit(-1)
+        # grid_position = world_to_grid_location(current_location)
+        # try:
+        #     assert round(grid_position[0]) >= 0
+        #     assert round(grid_position[1]) >= 0
+        #     assert round(grid_position[0]) <= 99
+        #     assert round(grid_position[1]) <= 99
+        # except:
+        #     print "Assertion Error: value out of range!"
+        #     print(grid_position)
+        #     exit(-1)
 
     Globals.pub.publish(stay_put_msg)
     print "Done."
@@ -380,6 +379,19 @@ def move_toward(target_position, direction):
     print "Done."
 
 
+def angle_diff(source, target):
+    """
+    Return the difference between two angle
+    :param source: source angle (deg)
+    :param target: target angle (deg)
+    :return: The difference (deg)
+    """
+    a = target-source
+    a = (a + 180) % 360 - 180
+    return a
+
+
+
 def turn_toward(target_orientation_z, eps=0.1):
     """
     Turn toward specific location
@@ -388,7 +400,7 @@ def turn_toward(target_orientation_z, eps=0.1):
     :return: None
     """
 
-    print "(%s) turning toward %s" % (Globals.robot_name, target_orientation_z)
+    # print "(%s) turning toward %s" % (Globals.robot_name, target_orientation_z)
 
     rotate_msg_pos = Twist()
     rotate_msg_pos.angular.z = 0.05
@@ -399,8 +411,14 @@ def turn_toward(target_orientation_z, eps=0.1):
     stay_put_msg = Twist()
     current_angle = np.rad2deg(get_euler_orientation()[2])
 
-    while math.fabs(current_angle - target_orientation_z) > eps:
-        Globals.pub.publish(rotate_msg_pos if current_angle < target_orientation_z else rotate_msg_neg)
+    while math.fabs(current_angle % 360.0 - target_orientation_z % 360.0) > eps:
+        # # check for clockwise or counter clockwise rotation
+        # direction = rotate_msg_pos \
+        #     if (target_orientation_z % 360.0 > current_angle % 360.0) or \
+        #        (target_orientation_z == 0 and 180 < current_angle % 360.0 < 360) \
+        #     else rotate_msg_neg
+        # Globals.pub.publish(direction)
+        Globals.pub.publish(rotate_msg_pos if angle_diff(current_angle, target_orientation_z) > 0 else rotate_msg_neg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
 
     Globals.pub.publish(stay_put_msg)
