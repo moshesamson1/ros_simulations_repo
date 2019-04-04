@@ -1,5 +1,5 @@
 free_thresh: 0.196
-image: map.pgm
+image: map32.pgm
 negate: 0
 occupied_thresh: 0.65
 origin: [0.00000, -0.000000, 0.000000]

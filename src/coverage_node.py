@@ -7,6 +7,7 @@
 #
 
 import sys
+import time
 from random import seed
 
 import numpy as np
@@ -46,16 +47,34 @@ def move_smartly(last_d, new_d, percentage):
     print "(%s) <%s> Moving %s -> %s ..." % (Globals.robot_name, current_grid_location, last_d, new_d)
     print "(%s) facing angle: %s" % (Globals.robot_name, np.rad2deg(get_euler_orientation()[2]))
 
-    # todo: use vectors to represent direction and compute angles
+    angle = get_angle_from_directions(last_d, new_d)
+
+    print "(%s) get_euler_orientation()[2]: %s" % (Globals.robot_name, get_euler_orientation()[2])
+    print "(%s) angle: %s" % (Globals.robot_name, angle)
+
+    # handle going to specific place...
+    turn_toward(np.rad2deg(get_euler_orientation()[2] + angle))
+    current_location_grid = world_to_grid_location(get_location())
+    move_toward(Entities.Slot(current_location_grid[0], current_location_grid[1]).GoByDirection(new_d), new_d)
+    # Done.
+
+    print "Done. <%s> %f" % (world_to_grid_location(get_location()), percentage)
+
+
+def get_angle_from_directions(last_d, new_d):
     if last_d == Direction.Z:
-        if last_d == Direction.E:
-            angle = -np.pi / 2
-        elif last_d == Direction.W:
-            angle = -np.pi
-        elif last_d == Direction.S:
+        if new_d == Direction.N:
             angle = np.pi / 2
+        elif new_d == Direction.W:
+            angle = np.pi
+        elif new_d == Direction.S:
+            angle = -np.pi / 2
+        elif new_d == Direction.E:
+            angle = 0.0
         else:
-            angle = 0
+            print("possible error in get_angle_from_directions. new Direction: ")
+            print new_d
+            angle = 0.0
     else:
         if (last_d == Direction.W and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.E) or \
                 (last_d == Direction.E and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.W):
@@ -68,17 +87,7 @@ def move_smartly(last_d, new_d, percentage):
         else:
             rospy.logerr("Wrong directions. trying to switch from %s to %s" % (last_d, new_d))
             exit(-1)
-
-    print "(%s) get_euler_orientation()[2]: %s" % (Globals.robot_name, get_euler_orientation()[2])
-    print "(%s) angle: %s" % (Globals.robot_name, angle)
-
-    # handle going to specific place...
-    turn_toward(np.rad2deg(get_euler_orientation()[2] + angle))
-    current_location_grid = world_to_grid_location(get_location())
-    move_toward(Entities.Slot(current_location_grid[0], current_location_grid[1]).GoByDirection(new_d), new_d)
-    # Done.
-
-    print "Done. <%s> %f" % (world_to_grid_location(get_location()), percentage)
+    return angle
 
 
 @deprecated
@@ -147,6 +156,7 @@ def main():
         rospy.loginfo("position: " + str(Globals.response.map.info.origin.position))
 
         create_occupancy_grid_using_robot_size(Globals.response.map, Globals.robot_size)
+        time.sleep(2)
         print "(%s) before tf" % Globals.robot_name
         # find robot's position
         Globals.tf_listener = tf.TransformListener()
@@ -175,67 +185,85 @@ def main():
             (starting_location_grid[1] - 1) / 2.0)
         print "(%s) starting_location_coarse_grid: %s" % (Globals.robot_name, str(starting_location_coarse_grid))
 
-        move_toward_correct_direction(Entities.Slot(0, 1), Direction.E, 0.0)
-        location = get_location()
-        location_grid = world_to_grid_location(location)
-        print("After moving to (0,1). Location: %s , Grid: %s" % (location, location_grid))
-        log_location_info()
+        # move_toward_correct_direction(Entities.Slot(0, 1), Direction.E, 0.0)
+        # location = get_location()
+        # location_grid = world_to_grid_location(location)
+        # print("After moving to (0,1). Location: %s , Grid: %s" % (location, location_grid))
+        # log_location_info()
+        #
+        # print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 90.0))
+        # set_orientation(90.0)
+        # move_toward_correct_direction(Entities.Slot(2, 1), Direction.N, 90.0)
+        # location = get_location()
+        # location_grid = world_to_grid_location(location)
+        # print("After moving to (1,1). Location: %s , Grid: %s" % (location, location_grid))
+        # log_location_info()
+        #
+        # print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 179.5))
+        # set_orientation(179.5)
+        # move_toward_correct_direction(Entities.Slot(2, 0), Direction.W, 179.5)
+        # location = get_location()
+        # location_grid = world_to_grid_location(location)
+        # print("After moving to (1,0). Location: %s , Grid: %s" % (location, location_grid))
+        # log_location_info()
+        #
+        # print(angle_diff(np.rad2deg(get_euler_orientation()[2]), -90.0))
+        # set_orientation(-90.0)
+        # move_toward_correct_direction(Entities.Slot(0, 0), Direction.S, -90.0)
+        # location = get_location()
+        # location_grid = world_to_grid_location(location)
+        # print("After moving to (0,0). Location: %s , Grid: %s" % (location, location_grid))
+        # log_location_info()
 
-        print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 90.0))
-        set_orientation(90.0)
-        move_toward_correct_direction(Entities.Slot(2, 1), Direction.N, 90.0)
-        location = get_location()
-        location_grid = world_to_grid_location(location)
-        print("After moving to (1,1). Location: %s , Grid: %s" % (location, location_grid))
-        log_location_info()
+        print("get coarse grid mst...")
+        coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
+        coarse_grid_graph = create_graph(coarse_grid_edges)
+        coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
+        print("Done.")
 
-        print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 179.5))
-        set_orientation(179.5)
-        move_toward_correct_direction(Entities.Slot(2, 0), Direction.W, 179.5)
-        location = get_location()
-        location_grid = world_to_grid_location(location)
-        print("After moving to (1,0). Location: %s , Grid: %s" % (location, location_grid))
-        log_location_info()
+        print("get path from mst...")
+        # get coverage path in the fine grid. using the mst of the coarse grid
+        path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
+        print("Done.")
 
-        print(angle_diff(np.rad2deg(get_euler_orientation()[2]), -90.0))
-        set_orientation(-90.0)
-        move_toward_correct_direction(Entities.Slot(0, 0), Direction.S, -90.0)
-        location = get_location()
-        location_grid = world_to_grid_location(location)
-        print("After moving to (0,0). Location: %s , Grid: %s" % (location, location_grid))
-        log_location_info()
+        # ~~~
+        last_p = path[0]
+        last_d = DIRECTION_Z
 
-        # coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
-        # coarse_grid_graph = create_graph(coarse_grid_edges)
-        # coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
-        #
-        # # get coverage path in the fine grid. using the mst of the coarse grid
-        # path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
-        #
-        # # ~~~
-        # last_p = path[0]
-        # last_d = DIRECTION_Z
-        #
-        # # move the robot along the coverage path
-        # # ignore first step of the path, as it is the starting position
-        #
-        # for p_ind in xrange(1, len(path)):
-        #     p = path[p_ind]
-        #
-        #     if last_p.GoUp() == p:
-        #         new_d = Direction.N
-        #     elif last_p.GoRight() == p:
-        #         new_d = Direction.E
-        #     elif last_p.GoDown() == p:
-        #         new_d = Direction.S
-        #     else:
-        #         new_d = Direction.W
-        #
-        #     percentage = float(p_ind) / float(len(path))
-        #     move(last_d, new_d, percentage=percentage, use_map=True)
-        #     # print_location()
-        #     last_d, last_p = new_d, p
-        #
+        # move the robot along the coverage path
+        # ignore first step of the path, as it is the starting position
+        print("Run over graph...")
+        for p_ind in xrange(1, len(path)):
+            p = path[p_ind]
+
+            if last_p.decrease_rows() == p:
+                new_d = Direction.S
+            elif last_p.increase_cols() == p:
+                new_d = Direction.E
+            elif last_p.increase_rows() == p:
+                new_d = Direction.N
+            else:
+                new_d = Direction.W
+
+            percentage = float(p_ind) / float(len(path))
+
+            relative_turn_rad = get_angle_from_directions(last_d, new_d)
+            init_dir = get_angle_from_directions(Direction.Z, last_d)
+
+            absolute_direction_deg = np.rad2deg(init_dir + relative_turn_rad)
+            print("<%s> Moving %s -> %s (%s)" % (percentage, last_p, p, absolute_direction_deg))
+
+            # set orientation and move
+            set_orientation(absolute_direction_deg)
+            move_toward_correct_direction(p, new_d, absolute_direction_deg)
+            location = get_location()
+            location_grid = world_to_grid_location(location)
+            print("After moving to %s. Location: %s , Grid: %s" % (p, location, location_grid))
+
+            # move(last_d, new_d, percentage=percentage, use_map=True)
+            # print_location()
+            last_d, last_p = new_d, p
+
         positions_file = open(Globals.absolute_path + "/%s_positions" % Globals.robot_name, "a+")
         positions_file.writelines(positions)
         positions_file.close()

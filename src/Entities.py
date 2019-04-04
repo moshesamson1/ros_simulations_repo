@@ -18,20 +18,20 @@ class Slot:
     def __hash__(self):
         return hash((self.row, self.col))
 
-    def GoLeft(self):
+    def go_west(self):
         return Slot(self.row, self.col - 1)
 
-    def GoRight(self):
+    def increase_cols(self):
         return Slot(self.row, self.col + 1)
 
-    def GoUp(self):
+    def decrease_rows(self):
         return Slot(self.row - 1, self.col)
 
-    def GoDown(self):
+    def increase_rows(self):
         return Slot(self.row + 1, self.col)
 
     def __str__(self):
-        return str(int(self.row)) + "," +str(int(self.col))
+        return str(int(self.row)) + "," + str(int(self.col))
 
     def __repr__(self):
         return str(self)
@@ -48,13 +48,13 @@ class Slot:
         # type: (Direction) -> Slot
 
         if direction == Direction.N:
-            return self.GoUp()
+            return self.decrease_rows()
         elif direction == Direction.E:
-            return self.GoRight()
+            return self.increase_cols()
         elif direction == Direction.S:
-            return self.GoDown()
+            return self.increase_rows()
         elif direction == Direction.W:
-            return self.GoLeft()
+            return self.go_west()
 
 
 class Orientation:

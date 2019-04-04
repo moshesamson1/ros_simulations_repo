@@ -64,6 +64,12 @@ def print_graph(edges):
 
 
 def create_covering_path(mst_edges_shallow_graph, initial_slot):
+    """
+
+    :param mst_edges_shallow_graph:
+    :param initial_slot:
+    :return:
+    """
     covering_path = []
     origin_slot = initial_slot
     slot = origin_slot
@@ -80,17 +86,17 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
         # find to where to go next, depend on the mst edges.
         # Check how much and which corners are in the mst group, then update slot accordingly
 
-        has_downward_edge = (shallow_slot, shallow_slot.GoDown()) in mst_edges_shallow_graph or (
-                                                                                                    shallow_slot.GoDown(),
+        has_downward_edge = (shallow_slot, shallow_slot.increase_rows()) in mst_edges_shallow_graph or (
+                                                                                                    shallow_slot.increase_rows(),
                                                                                                     shallow_slot) in mst_edges_shallow_graph
-        has_rightward_edge = (shallow_slot, shallow_slot.GoRight()) in mst_edges_shallow_graph or (
-                                                                                                      shallow_slot.GoRight(),
+        has_rightward_edge = (shallow_slot, shallow_slot.increase_cols()) in mst_edges_shallow_graph or (
+                                                                                                      shallow_slot.increase_cols(),
                                                                                                       shallow_slot) in mst_edges_shallow_graph
-        has_leftward_edge = (shallow_slot, shallow_slot.GoLeft()) in mst_edges_shallow_graph or (
-                                                                                                    shallow_slot.GoLeft(),
+        has_leftward_edge = (shallow_slot, shallow_slot.go_west()) in mst_edges_shallow_graph or (
+                                                                                                    shallow_slot.go_west(),
                                                                                                     shallow_slot) in mst_edges_shallow_graph
-        has_upward_edge = (shallow_slot, shallow_slot.GoUp()) in mst_edges_shallow_graph or (shallow_slot.GoUp(),
-                                                                                             shallow_slot) in mst_edges_shallow_graph
+        has_upward_edge = (shallow_slot, shallow_slot.decrease_rows()) in mst_edges_shallow_graph or (shallow_slot.decrease_rows(),
+                                                                                                      shallow_slot) in mst_edges_shallow_graph
 
         bl_corner_in_mst = False
         br_corner_in_mst = False
@@ -138,71 +144,71 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
 
         # check to see if only one vertex was in the mst
         if br_corner_in_mst and not (ur_corner_in_mst or bl_corner_in_mst or ul_corner_in_mst):
-            if slot.GoDown() == last_slot or slot == last_slot:
-                slot = slot.GoRight()
-            elif slot.GoRight() == last_slot:
-                slot = slot.GoDown()
+            if slot.increase_rows() == last_slot or slot == last_slot:
+                slot = slot.increase_cols()
+            elif slot.increase_cols() == last_slot:
+                slot = slot.increase_rows()
         elif ur_corner_in_mst and not (br_corner_in_mst or bl_corner_in_mst or ul_corner_in_mst):
-            if slot.GoRight() == last_slot or slot == last_slot:
-                slot = slot.GoUp()
-            elif slot.GoUp() == last_slot:
-                slot = slot.GoRight()
+            if slot.increase_cols() == last_slot or slot == last_slot:
+                slot = slot.decrease_rows()
+            elif slot.decrease_rows() == last_slot:
+                slot = slot.increase_cols()
         elif bl_corner_in_mst and not (ul_corner_in_mst or ur_corner_in_mst or br_corner_in_mst):
-            if slot.GoLeft() == last_slot or slot == initial_slot:
-                slot = slot.GoDown()
-            elif slot.GoDown() == last_slot:
-                slot = slot.GoLeft()
+            if slot.go_west() == last_slot or slot == initial_slot:
+                slot = slot.increase_rows()
+            elif slot.increase_rows() == last_slot:
+                slot = slot.go_west()
         elif ul_corner_in_mst and not (bl_corner_in_mst or br_corner_in_mst or ur_corner_in_mst):
-            if slot.GoUp() == last_slot or slot == initial_slot:
-                slot = slot.GoLeft()
-            elif slot.GoLeft() == last_slot:
-                slot = slot.GoUp()
+            if slot.decrease_rows() == last_slot or slot == initial_slot:
+                slot = slot.go_west()
+            elif slot.go_west() == last_slot:
+                slot = slot.decrease_rows()
 
         # check to see if exactly two vertices are in the mst
         elif bl_corner_in_mst and br_corner_in_mst and not (ul_corner_in_mst or ur_corner_in_mst):
-            if slot.GoLeft() == last_slot or slot == initial_slot:
-                slot = slot.GoRight()
-            elif slot.GoRight() == last_slot:
-                slot = slot.GoLeft()
+            if slot.go_west() == last_slot or slot == initial_slot:
+                slot = slot.increase_cols()
+            elif slot.increase_cols() == last_slot:
+                slot = slot.go_west()
             else:
                 print "error 1"
         elif ul_corner_in_mst and ur_corner_in_mst and not (bl_corner_in_mst or br_corner_in_mst):
-            if slot.GoRight() == last_slot or slot == initial_slot:
-                slot = slot.GoLeft()
-            elif slot.GoLeft() == last_slot:
-                slot = slot.GoRight()
+            if slot.increase_cols() == last_slot or slot == initial_slot:
+                slot = slot.go_west()
+            elif slot.go_west() == last_slot:
+                slot = slot.increase_cols()
         elif br_corner_in_mst and ur_corner_in_mst and not (bl_corner_in_mst or ul_corner_in_mst):
-            if slot.GoDown() == last_slot or slot == initial_slot:
-                slot = slot.GoUp()
-            elif slot.GoUp() == last_slot:
-                slot = slot.GoDown()
+            if slot.increase_rows() == last_slot or slot == initial_slot:
+                slot = slot.decrease_rows()
+            elif slot.decrease_rows() == last_slot:
+                slot = slot.increase_rows()
         elif bl_corner_in_mst and ul_corner_in_mst and not (br_corner_in_mst or ur_corner_in_mst):
-            if slot.GoUp() == last_slot or slot == initial_slot:
-                slot = slot.GoDown()
-            elif slot.GoDown() == last_slot:
-                slot = slot.GoUp()
+            if slot.decrease_rows() == last_slot or slot == initial_slot:
+                slot = slot.increase_rows()
+            elif slot.increase_rows() == last_slot:
+                slot = slot.decrease_rows()
 
         # check for exactly 3 vertices
         elif br_corner_in_mst and bl_corner_in_mst and ul_corner_in_mst and not ur_corner_in_mst:
-            if slot.GoUp() == last_slot or slot == initial_slot:
-                slot = slot.GoRight()
-            elif slot.GoRight() == last_slot:
-                slot = slot.GoUp()
+            if slot.decrease_rows() == last_slot or slot == initial_slot:
+                slot = slot.increase_cols()
+            elif slot.increase_cols() == last_slot:
+                slot = slot.decrease_rows()
         elif bl_corner_in_mst and ul_corner_in_mst and ur_corner_in_mst and not br_corner_in_mst:
-            if slot.GoDown() == last_slot or slot == initial_slot:
-                slot = slot.GoRight()
-            elif slot.GoRight() == last_slot:
-                slot = slot.GoDown()
+            if slot.increase_rows() == last_slot or slot == initial_slot:
+                slot = slot.increase_cols()
+            elif slot.increase_cols() == last_slot:
+                slot = slot.increase_rows()
         elif ul_corner_in_mst and ur_corner_in_mst and br_corner_in_mst and not bl_corner_in_mst:
-            if slot.GoLeft() == last_slot or slot == initial_slot:
-                slot = slot.GoDown()
-            elif slot.GoDown() == last_slot:
-                slot = slot.GoLeft()
+            if slot.go_west() == last_slot or slot == initial_slot:
+                slot = slot.increase_rows()
+            elif slot.increase_rows() == last_slot:
+                slot = slot.go_west()
         elif ur_corner_in_mst and br_corner_in_mst and bl_corner_in_mst and not ul_corner_in_mst:
-            if slot.GoUp() == last_slot or slot == initial_slot:
-                slot = slot.GoLeft()
-            elif slot.GoLeft() == last_slot:
-                slot = slot.GoUp()
+            if slot.decrease_rows() == last_slot or slot == initial_slot:
+                slot = slot.go_west()
+            elif slot.go_west() == last_slot:
+                slot = slot.decrease_rows()
         else:
             print "error has occured!"
             print "bl_corner_in_mst: %s" % bl_corner_in_mst
