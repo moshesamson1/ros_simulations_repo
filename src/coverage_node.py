@@ -338,7 +338,7 @@ def angle_between(v1, v2):
 def move_toward_correct_direction(target_position, direction, target_orientation_z, eps = 0.01):
     # type: (Entities.Slot, Direction, float, float) -> None
     move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.025
+    move_forward_msg.linear.x = 0.5
     stay_put_msg = Twist()
 
     # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
@@ -349,19 +349,20 @@ def move_toward_correct_direction(target_position, direction, target_orientation
         current_location = get_location()
 
         # correct orientation every single whole unit of map
-        if current_location[1 if (direction == Direction.N or direction == Direction.S) else 0] % 1.0 < 0.05:
+        if current_location[1 if (direction == Direction.N or direction == Direction.S) else 0] % 1.0 < 0.1:
+            # todo: can we turn toward destination? to fix current deviation from coarse?
             turn_toward(target_orientation_z)
 
-        # grid_position = world_to_grid_location(current_location)
-        # try:
-        #     assert round(grid_position[0]) >= 0
-        #     assert round(grid_position[1]) >= 0
-        #     assert round(grid_position[0]) <= 99
-        #     assert round(grid_position[1]) <= 99
-        # except:
-        #     print "Assertion Error: value out of range!"
-        #     print(grid_position)
-        #     exit(-1)
+        grid_position = world_to_grid_location(current_location)
+        try:
+            assert round(grid_position[0]) >= 0
+            assert round(grid_position[1]) >= 0
+            assert round(grid_position[0]) <= 32
+            assert round(grid_position[1]) <= 32
+        except:
+            print "Assertion Error: value out of range!"
+            print(grid_position)
+            exit(-1)
 
     Globals.pub.publish(stay_put_msg)
     print "Done."
@@ -419,7 +420,6 @@ def angle_diff(source, target):
     return a
 
 
-
 def turn_toward(target_orientation_z, eps=0.1):
     """
     Turn toward specific location
@@ -440,12 +440,6 @@ def turn_toward(target_orientation_z, eps=0.1):
     current_angle = np.rad2deg(get_euler_orientation()[2])
 
     while math.fabs(current_angle % 360.0 - target_orientation_z % 360.0) > eps:
-        # # check for clockwise or counter clockwise rotation
-        # direction = rotate_msg_pos \
-        #     if (target_orientation_z % 360.0 > current_angle % 360.0) or \
-        #        (target_orientation_z == 0 and 180 < current_angle % 360.0 < 360) \
-        #     else rotate_msg_neg
-        # Globals.pub.publish(direction)
         Globals.pub.publish(rotate_msg_pos if angle_diff(current_angle, target_orientation_z) > 0 else rotate_msg_neg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
 
