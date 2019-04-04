@@ -298,6 +298,18 @@ def set_orientation(target_orientation_z):
     print "Done."
 
 
+def get_distance_from_slot(s, index):
+    world_location = get_location()
+    distance = math.fabs(s.row - (world_location[1] / 2.0)) if index == 0 else math.fabs(s.col - (world_location[0] / 2.0))
+    return distance
+
+
+def is_new_distance_lower(old, new):
+    print("old: %s" % old)
+    print("new: %s" % new)
+    return new < old
+
+
 def is_world_in_grid_slot(s, index, eps=0.01):
     # type: (Entities.Slot, int, float) -> bool
     world_location = get_location()
@@ -307,7 +319,7 @@ def is_world_in_grid_slot(s, index, eps=0.01):
 
 def grid_to_world(target_position):
     # type: (Entities.Slot) -> tuple
-    return (target_position.col * 2.0, target_position.row * 2.0)
+    return target_position.col * 2.0, target_position.row * 2.0
 
 
 def unit_vector(vector):
@@ -338,15 +350,19 @@ def angle_between(v1, v2):
 def move_toward_correct_direction(target_position, direction, target_orientation_z, eps = 0.01):
     # type: (Entities.Slot, Direction, float, float) -> None
     move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.5
+    move_forward_msg.linear.x = 0.025
     stay_put_msg = Twist()
 
     # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
     index = 0 if (direction == Direction.N or direction == Direction.S) else 1
-    while not is_world_in_grid_slot(target_position, index, eps):
+
+    old_distance_from_slot = get_distance_from_slot(target_position, index) + 1
+    # while is_new_distance_lower(old=old_distance_from_slot, new=get_distance_from_slot(target_position, index)):
+    while not is_world_in_grid_slot(target_position, index):
         # move one unit forward
         Globals.pub.publish(move_forward_msg)
         current_location = get_location()
+        old_distance_from_slot = get_distance_from_slot(target_position, index)
 
         # correct orientation every single whole unit of map
         if current_location[1 if (direction == Direction.N or direction == Direction.S) else 0] % 1.0 < 0.1:
@@ -496,7 +512,7 @@ def world_to_grid_location(world_location):
 
     try:
         assert grid_x >= 0
-        assert  grid_y >= 0
+        assert grid_y >= 0
     except:
         print "Error in world_to_grid_location"
         print grid_x
