@@ -165,7 +165,6 @@ def main():
         print "(%s) after tf" % Globals.robot_name
 
         # point robot to the correct direction
-        # set_orientation(90.0)
         set_orientation(0.0)
         print "(%s) angle after orientation set: %s" % (Globals.robot_name, np.rad2deg(get_euler_orientation()[2]))
 
@@ -184,36 +183,6 @@ def main():
         starting_location_coarse_grid = int((starting_location_grid[0] - 1) / 2.0), int(
             (starting_location_grid[1] - 1) / 2.0)
         print "(%s) starting_location_coarse_grid: %s" % (Globals.robot_name, str(starting_location_coarse_grid))
-
-        # move_toward_correct_direction(Entities.Slot(0, 1), Direction.E, 0.0)
-        # location = get_location()
-        # location_grid = world_to_grid_location(location)
-        # print("After moving to (0,1). Location: %s , Grid: %s" % (location, location_grid))
-        # log_location_info()
-        #
-        # print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 90.0))
-        # set_orientation(90.0)
-        # move_toward_correct_direction(Entities.Slot(2, 1), Direction.N, 90.0)
-        # location = get_location()
-        # location_grid = world_to_grid_location(location)
-        # print("After moving to (1,1). Location: %s , Grid: %s" % (location, location_grid))
-        # log_location_info()
-        #
-        # print(angle_diff(np.rad2deg(get_euler_orientation()[2]), 179.5))
-        # set_orientation(179.5)
-        # move_toward_correct_direction(Entities.Slot(2, 0), Direction.W, 179.5)
-        # location = get_location()
-        # location_grid = world_to_grid_location(location)
-        # print("After moving to (1,0). Location: %s , Grid: %s" % (location, location_grid))
-        # log_location_info()
-        #
-        # print(angle_diff(np.rad2deg(get_euler_orientation()[2]), -90.0))
-        # set_orientation(-90.0)
-        # move_toward_correct_direction(Entities.Slot(0, 0), Direction.S, -90.0)
-        # location = get_location()
-        # location_grid = world_to_grid_location(location)
-        # print("After moving to (0,0). Location: %s , Grid: %s" % (location, location_grid))
-        # log_location_info()
 
         print("get coarse grid mst...")
         coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
@@ -259,6 +228,11 @@ def main():
             location = get_location()
             location_grid = world_to_grid_location(location)
             print("After moving to %s. Location: %s , Grid: %s" % (p, location, location_grid))
+            try:
+                assert Entities.Slot(location_grid[0], location_grid[1]) == p
+            except:
+                print ("Aimed for: %s and reached %s" % (p, Entities.Slot(location_grid[0], location_grid[1])))
+                exit(-1)
 
             # move(last_d, new_d, percentage=percentage, use_map=True)
             # print_location()
@@ -293,14 +267,23 @@ def get_parameters():
 
 
 def set_orientation(target_orientation_z):
-    print "*** set_orientation ***"
+    print("*** set_orientation to %d ***" % target_orientation_z)
     turn_toward(target_orientation_z)
-    print "Done."
+    print "Done set_orientation."
 
 
 def get_distance_from_slot(s, index):
+    """
+    Get the distance to the given slot s, in specific axis indicated by index
+    :param s: the slot measuring distance from
+    :param index: the axis in which the distance is measured.
+    :return: the distance
+    """
     world_location = get_location()
-    distance = math.fabs(s.row - (world_location[1] / 2.0)) if index == 0 else math.fabs(s.col - (world_location[0] / 2.0))
+    distance = math.fabs(s.row - (world_location[1] / 2.0)) if index == 0 else math.fabs(
+        s.col - (world_location[0] / 2.0))
+    print("(dis): distance: %s" % distance)
+    assert distance < 5
     return distance
 
 
@@ -310,11 +293,13 @@ def is_new_distance_lower(old, new):
     return new < old
 
 
-def is_world_in_grid_slot(s, index, eps=0.01):
+def is_world_in_grid_slot(s, index, eps=0.05):
     # type: (Entities.Slot, int, float) -> bool
     world_location = get_location()
-    return math.fabs(s.row - (world_location[1] / 2.0)) <= eps if index == 0 else math.fabs(
+    return_location = math.fabs(s.row - (world_location[1] / 2.0)) <= eps if index == 0 else math.fabs(
         s.col - (world_location[0] / 2.0)) <= eps
+    # print("(is_world_in_grid_slot): world_location: %s" % return_location)
+    return return_location
 
 
 def grid_to_world(target_position):
@@ -347,27 +332,88 @@ def angle_between(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 
-def move_toward_correct_direction(target_position, direction, target_orientation_z, eps = 0.01):
+def passed_target(d1, d2, d3, d4, d5):
+    """
+    Check if missed target by THIS much (distance from  target is low then high again.
+    The distance should have been high, then go low... and if high again it means that we passed local minima of
+    distance.
+    [d1: before two steps] -> [d2: before 1 steps] -> [d3: target] -> [d4: after 1 steps] -> [d5: after two steps]
+    :param d5:
+    :param d4:
+    :param d1:
+    :param d2:
+    :param d3:
+    :return:
+    """
+    print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
+
+    cond = d1 > d2 > d3 and d3 < d4 < d5
+    if cond:
+        print("Passed Target!")
+
+    # sanity check
+    assert d5 < 5
+    if d1 < d2 < d3 < d4 < d5:
+        print("wrong distances - all in reverse!")
+        print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
+        exit(-1)
+
+    return cond
+
+
+def assert_positive_location_fix_otherwise(current_location, current_orientation):
+    move_forward_msg = Twist()
+    move_forward_msg.linear.x = 0.05
+    stay_put_msg = Twist()
+
+    if current_location[0] >= -0.5 and current_location[1] >= -0.5:
+        return current_location
+
+    fixed_location = current_location
+
+    for i in [0, 1]:
+        if current_location[i] < -0.5:  # fix y location
+            set_orientation(0.0 if i == 0 else 90.0)
+            while fixed_location[i] < 0:
+                Globals.pub.publish(move_forward_msg)
+                fixed_location = get_location()
+                Globals.pub.publish(stay_put_msg)
+                print("current location: (%s,%s)" % (fixed_location[0], fixed_location[1]))
+            Globals.pub.publish(stay_put_msg)
+            set_orientation(current_orientation)
+
+    print("fixing from %s to %s" % (current_location, fixed_location))
+    return fixed_location
+
+
+def move_toward_correct_direction(target_position, direction, target_orientation_z, eps=0.01):
     # type: (Entities.Slot, Direction, float, float) -> None
     move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.025
+    move_forward_msg.linear.x = 0.5
     stay_put_msg = Twist()
 
     # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
     index = 0 if (direction == Direction.N or direction == Direction.S) else 1
 
-    old_distance_from_slot = get_distance_from_slot(target_position, index) + 1
-    # while is_new_distance_lower(old=old_distance_from_slot, new=get_distance_from_slot(target_position, index)):
-    while not is_world_in_grid_slot(target_position, index):
+    # initiate indices
+    d1, d2, d3, d4, d5 = 0, 3, 2, 1, round(get_distance_from_slot(target_position, index), 3)
+
+    while not passed_target(d1, d2, d3, d4, d5):
+        print("in while..")
+        time.sleep(0.01)  # do we need that???
+
         # move one unit forward
         Globals.pub.publish(move_forward_msg)
-        current_location = get_location()
-        old_distance_from_slot = get_distance_from_slot(target_position, index)
+        # Globals.pub.publish(stay_put_msg)
+
+        current_location = assert_positive_location_fix_otherwise(get_location(), target_orientation_z)
+
+        # update parameters
+        d1, d2, d3, d4, d5 = d2, d3, d4, d5, round(get_distance_from_slot(target_position, index), 3)
 
         # correct orientation every single whole unit of map
-        if current_location[1 if (direction == Direction.N or direction == Direction.S) else 0] % 1.0 < 0.1:
-            # todo: can we turn toward destination? to fix current deviation from coarse?
-            turn_toward(target_orientation_z)
+        if current_location[1 if (direction == Direction.N or direction == Direction.S) else 0] % 1.0 < 0.05:
+            turn_toward(target_orientation_z, 0.005)
 
         grid_position = world_to_grid_location(current_location)
         try:
@@ -380,8 +426,8 @@ def move_toward_correct_direction(target_position, direction, target_orientation
             print(grid_position)
             exit(-1)
 
-    Globals.pub.publish(stay_put_msg)
-    print "Done."
+    print("Reached target (%s,%s)." % (current_location[0], current_location[1]))
+
 
 @deprecated
 def move_toward(target_position, direction):
@@ -407,7 +453,7 @@ def move_toward(target_position, direction):
         current_location = get_location()
 
         print "(%s) current_location: %s, target_location:  %s" % (
-        Globals.robot_name, current_location, target_position)
+            Globals.robot_name, current_location, target_position)
         grid_position = world_to_grid_location(current_location)
         try:
             assert round(grid_position[0]) >= 0
@@ -431,7 +477,7 @@ def angle_diff(source, target):
     :param target: target angle (deg)
     :return: The difference (deg)
     """
-    a = target-source
+    a = target - source
     a = (a + 180) % 360 - 180
     return a
 
@@ -511,8 +557,8 @@ def world_to_grid_location(world_location):
     grid_y = int(round(world_location[0] / 2.0))
 
     try:
-        assert grid_x >= 0
-        assert grid_y >= 0
+        assert grid_x >= -0.5
+        assert grid_y >= -0.5
     except:
         print "Error in world_to_grid_location"
         print grid_x

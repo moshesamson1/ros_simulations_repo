@@ -4,11 +4,15 @@
 	<arg name="map_file" value="../catkin_ws/src/comp_cov_sim/custom_maps/map.yaml"/>
 	<arg name="initial_pose_x" default="0.0"/>
 	<arg name="initial_pose_y" default="0.0"/>
+	<arg name="gui" default="false"/>
+	<arg name="accelerate_time" default="100"/>
     	<param name="/use_sim_time" value="true" />  
   	
 	<!-- Launch turtle bot world -->
 	<include file="$(find comp_cov_sim)/launch/world.launch">
-		<arg name="world_file" value="$(arg world_file)"/>	
+		<arg name="world_file" value="$(arg world_file)"/>
+		<arg name="gui" value="$(arg gui)"/>
+		<arg name="accelerate_time" value="$(arg accelerate_time)"/>	
 	</include>
 </launch>
 
