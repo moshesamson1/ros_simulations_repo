@@ -293,7 +293,15 @@ def is_new_distance_lower(old, new):
     return new < old
 
 
+@deprecated
 def is_world_in_grid_slot(s, index, eps=0.05):
+    """
+    This method is faulted and should be checked!
+    :param s:
+    :param index:
+    :param eps:
+    :return:
+    """
     # type: (Entities.Slot, int, float) -> bool
     world_location = get_location()
     return_location = math.fabs(s.row - (world_location[1] / 2.0)) <= eps if index == 0 else math.fabs(
@@ -347,7 +355,7 @@ def passed_target(d1, d2, d3, d4, d5):
     """
     print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
 
-    cond = d1 > d2 > d3 and d3 < d4 < d5
+    cond = d1 >= d2 >= d3 and d3 < d4 < d5
     if cond:
         print("Passed Target!")
 
