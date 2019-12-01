@@ -359,12 +359,13 @@ def passed_target(d1, d2, d3, d4, d5):
     if cond:
         print("Passed Target!")
 
-    # sanity check
+    # sanity checks
     assert d5 < 5
-    if d1 < d2 < d3 < d4 < d5:
-        print("wrong distances - all in reverse!")
-        print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
-        exit(-1)
+    # The following sanity check caused more errors than good, therefore removed for now.
+    # if d1 < d2 < d3 < d4 < d5:
+    #     print("wrong distances - all in reverse!")
+    #     print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
+    #     exit(-1)
 
     return cond
 
