@@ -206,35 +206,32 @@ def main():
         # ignore first step of the path, as it is the starting position
         print("Run over graph...")
         for p_ind in xrange(1, len(path)):
-            p = path[p_ind]
-            percentage = float(p_ind) / float(len(path))
+            print("moving from %s to %s" % (path[p_ind - 1], path[p_ind]))
+            move_from_x_to_y_using_angle(path[p_ind - 1], path[p_ind])
 
-            location, location_grid, current_direction = move_from_a_to_b(last_d, last_p, p, percentage)
-            print("After moving to %s. Location: %s , Grid: %s" % (p, location, location_grid))
-
-            location_grid_slot = Entities.Slot(location_grid[0], location_grid[1])
-            while not location_grid_slot == p:
-                print("Aimed for: %s and reached %s. Create path and move toward correct position" %
-                      (p, location_grid_slot))
-                correction_path = create_path_from_a_to_b(location_grid_slot, p)
-
-                current_grid_location = location_grid_slot
-                for cp in correction_path[1:]:
-                    print("CORRECTION: moving from %s to %s" % (current_grid_location, cp))
-                    location, location_grid, current_direction = move_from_a_to_b(current_direction,
-                                                                                          current_grid_location,
-                                                                                          cp,
-                                                                                          0.0)
-                    current_grid_location = Entities.Slot(location_grid[0], location_grid[1])
-            # try:
-            #     assert
-            # except:
-            #     print ("Aimed for: %s and reached %s" % (p, Entities.Slot(location_grid[0], location_grid[1])))
-            #     exit(-1)
-
-            # move(last_d, new_d, percentage=percentage, use_map=True)
-            # print_location()
-            last_d, last_p = current_direction, p
+        # for p_ind in xrange(1, len(path)):
+        #     p = path[p_ind]
+        #     percentage = float(p_ind) / float(len(path))
+        #
+        #     location, location_grid, current_direction = move_from_a_to_b(last_d, last_p, p, percentage)
+        #     print("After moving to %s. Location: %s , Grid: %s" % (p, location, location_grid))
+        #
+        #     location_grid_slot = Entities.Slot(location_grid[0], location_grid[1])
+        #     while not location_grid_slot == p:
+        #         print("Aimed for: %s and reached %s. Create path and move toward correct position" %
+        #               (p, location_grid_slot))
+        #         correction_path = create_path_from_a_to_b(location_grid_slot, p)
+        #
+        #         current_grid_location = location_grid_slot
+        #         for cp in correction_path[1:]:
+        #             print("CORRECTION: moving from %s to %s" % (current_grid_location, cp))
+        #             location, location_grid, current_direction = move_from_a_to_b(current_direction,
+        #                                                                                   current_grid_location,
+        #                                                                                   cp,
+        #                                                                                   0.0)
+        #             current_grid_location = Entities.Slot(location_grid[0], location_grid[1])
+        #
+        #     last_d, last_p = current_direction, p
 
         positions_file = open(Globals.absolute_path + "/%s_positions" % Globals.robot_name, "a+")
         positions_file.writelines(positions)
@@ -257,7 +254,52 @@ def create_path_from_a_to_b(location_grid_slot, p):
     return correction_moves
 
 
+def move_from_x_to_y_using_angle(source, target):
+    """
+    :param x:
+    :param y:
+    :return:
+    """
+    # should compute again between world positons and not grid positions!
+    (source_x, source_y) = grid_to_world(source)
+    (target_x, target_y) = grid_to_world(target)
+    x_to_y_angle = Angle(source_x, source_y, target_x, target_y)
+    # facing_angle = np.rad2deg(get_euler_orientation()[2])
+    set_orientation(x_to_y_angle)
+
+    move_forward_msg = Twist()
+    move_forward_msg.linear.x = 0.5
+    stay_put_msg = Twist()
+    not_reached = True
+    while not_reached:
+        Globals.pub.publish(move_forward_msg)  # publish according to distance?
+        distance = get_linear_distance_from_slot(target)
+        if distance < 0.05:
+            print("REACHED TARGET (%s)!" % target)
+            not_reached = False
+        elif distance > 1.25:
+            print("PASSED TARGET(%s). set angle toward target and try again." % target)
+            current_location = get_location()
+            current_to_y_angle = Angle(current_location[0], current_location[1], target_x, target_y)
+            set_orientation((current_to_y_angle) % 360)
+            # set_orientation((x_to_y_angle+180)%360)
+            # after 'passing' the target, we switched direction and try again to reach the target. we do so until we
+        else:
+            # print("still moving toward target...")
+            pass
+    Globals.pub.publish(stay_put_msg)
+
+
+
 def move_from_a_to_b(last_d, last_p, p, percentage):
+    """
+    This method assumes movement only in 90deg. trying to correct position accordingly
+    :param last_d:
+    :param last_p:
+    :param p:
+    :param percentage:
+    :return:
+    """
     if last_p.decrease_rows() == p:
         new_d = Direction.S
     elif last_p.increase_cols() == p:
@@ -319,6 +361,22 @@ def get_distance_from_slot(s, index):
     return distance
 
 
+def get_linear_distance_from_slot(slot):
+    """
+    :type (Entities.Slot)->int
+    Get the linear distance from the current position to the given slot s
+    :param s: the slot measuring distance from
+    :return: the distance
+    """
+    world_location = get_location()
+    dist_1 = math.pow(slot.row - (world_location[1] / 2.0), 2)
+    dist_2 = math.pow(slot.col - (world_location[0] / 2.0), 2)
+    distance = math.sqrt(dist_1 + dist_2)
+    # print("(lin_dis): linear distance: %s" % distance)
+    # assert distance < 3
+    return distance
+
+
 def is_new_distance_lower(old, new):
     print("old: %s" % old)
     print("new: %s" % new)
@@ -347,11 +405,13 @@ def grid_to_world(target_position):
     return target_position.col * 2.0, target_position.row * 2.0
 
 
+@deprecated
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
     return vector / np.linalg.norm(vector)
 
 
+@deprecated
 def angle_between(v1, v2):
     """
     :type (tuple, tuple) -> float
@@ -510,7 +570,6 @@ def move_toward(target_position, direction):
     Globals.pub.publish(stay_put_msg)
     print "Done."
 
-
 def angle_diff(source, target):
     """
     Return the difference between two angle
@@ -579,10 +638,10 @@ def get_location():
         location = (round(trans[0]) if too_small_reminder(trans[0]) else trans[0],
                     round(trans[1]) if too_small_reminder(trans[1]) else trans[1])
 
-        if location[0] < -1:
-            print "location < -1"
-            print location
-            print trans
+        # if location[0] < -1:
+        #     print "location < -1"
+        #     print location
+        #     print trans
 
         return location
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
