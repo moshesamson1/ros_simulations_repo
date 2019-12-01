@@ -137,6 +137,9 @@ def move_blindly(last_d, new_d, distance, percentage):
     print "Done. %f" % percentage
 
 
+
+
+
 def main():
     rospy.init_node('coverage_node', argv=sys.argv)
     Globals.robot_size = 0.35  # meters!
@@ -204,39 +207,34 @@ def main():
         print("Run over graph...")
         for p_ind in xrange(1, len(path)):
             p = path[p_ind]
-
-            if last_p.decrease_rows() == p:
-                new_d = Direction.S
-            elif last_p.increase_cols() == p:
-                new_d = Direction.E
-            elif last_p.increase_rows() == p:
-                new_d = Direction.N
-            else:
-                new_d = Direction.W
-
             percentage = float(p_ind) / float(len(path))
 
-            relative_turn_rad = get_angle_from_directions(last_d, new_d)
-            init_dir = get_angle_from_directions(Direction.Z, last_d)
-
-            absolute_direction_deg = np.rad2deg(init_dir + relative_turn_rad)
-            print("<%s> Moving %s -> %s (%s)" % (percentage, last_p, p, absolute_direction_deg))
-
-            # set orientation and move
-            set_orientation(absolute_direction_deg)
-            move_toward_correct_direction(p, new_d, absolute_direction_deg)
-            location = get_location()
-            location_grid = world_to_grid_location(location)
+            location, location_grid, current_direction = move_from_a_to_b(last_d, last_p, p, percentage)
             print("After moving to %s. Location: %s , Grid: %s" % (p, location, location_grid))
-            try:
-                assert Entities.Slot(location_grid[0], location_grid[1]) == p
-            except:
-                print ("Aimed for: %s and reached %s" % (p, Entities.Slot(location_grid[0], location_grid[1])))
-                exit(-1)
+
+            location_grid_slot = Entities.Slot(location_grid[0], location_grid[1])
+            while not location_grid_slot == p:
+                print("Aimed for: %s and reached %s. Create path and move toward correct position" %
+                      (p, location_grid_slot))
+                correction_path = create_path_from_a_to_b(location_grid_slot, p)
+
+                current_grid_location = location_grid_slot
+                for cp in correction_path[1:]:
+                    print("CORRECTION: moving from %s to %s" % (current_grid_location, cp))
+                    location, location_grid, current_direction = move_from_a_to_b(current_direction,
+                                                                                          current_grid_location,
+                                                                                          cp,
+                                                                                          0.0)
+                    current_grid_location = Entities.Slot(location_grid[0], location_grid[1])
+            # try:
+            #     assert
+            # except:
+            #     print ("Aimed for: %s and reached %s" % (p, Entities.Slot(location_grid[0], location_grid[1])))
+            #     exit(-1)
 
             # move(last_d, new_d, percentage=percentage, use_map=True)
             # print_location()
-            last_d, last_p = new_d, p
+            last_d, last_p = current_direction, p
 
         positions_file = open(Globals.absolute_path + "/%s_positions" % Globals.robot_name, "a+")
         positions_file.writelines(positions)
@@ -244,6 +242,40 @@ def main():
 
     except rospy.ServiceException, e:
         rospy.logerr("Service call failed: %s" % e)
+
+
+def create_path_from_a_to_b(location_grid_slot, p):
+    x_sign = 1 if p.row > location_grid_slot.row else -1
+    x_moves = [Entities.Slot(x, location_grid_slot.col) for x in range(location_grid_slot.row, p.row + x_sign, x_sign)]
+
+    y_sign = 1 if p.col > location_grid_slot.col else -1
+    y_moves = [Entities.Slot(p.row, y) for y in range(location_grid_slot.col, p.col + y_sign, y_sign)]
+
+    correction_moves = []
+    correction_moves.extend(x_moves)
+    correction_moves.extend(y_moves)
+    return correction_moves
+
+
+def move_from_a_to_b(last_d, last_p, p, percentage):
+    if last_p.decrease_rows() == p:
+        new_d = Direction.S
+    elif last_p.increase_cols() == p:
+        new_d = Direction.E
+    elif last_p.increase_rows() == p:
+        new_d = Direction.N
+    else:
+        new_d = Direction.W
+    relative_turn_rad = get_angle_from_directions(last_d, new_d)
+    init_dir = get_angle_from_directions(Direction.Z, last_d)
+    absolute_direction_deg = np.rad2deg(init_dir + relative_turn_rad)
+    print("<%s> Moving %s -> %s (%s)" % (percentage, last_p, p, absolute_direction_deg))
+    # set orientation and move
+    set_orientation(absolute_direction_deg)
+    move_toward_correct_direction(p, new_d, absolute_direction_deg)
+    location = get_location()
+    location_grid = world_to_grid_location(location)
+    return location, location_grid, new_d
 
 
 def get_publisher_and_subscriber():
@@ -353,9 +385,10 @@ def passed_target(d1, d2, d3, d4, d5):
     :param d3:
     :return:
     """
-    print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
+    # print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
 
-    cond = d1 >= d2 >= d3 and d3 < d4 < d5
+    # cond = d1 >= d2 >= d3 and d3 < d4 < d5
+    cond = (d1 > d2 or d1 > d3 or d1 > d4) and (d5 > d4 or d5 > d3 or d5 > d2)
     if cond:
         print("Passed Target!")
 
@@ -408,7 +441,6 @@ def move_toward_correct_direction(target_position, direction, target_orientation
     d1, d2, d3, d4, d5 = 0, 3, 2, 1, round(get_distance_from_slot(target_position, index), 3)
 
     while not passed_target(d1, d2, d3, d4, d5):
-        print("in while..")
         time.sleep(0.01)  # do we need that???
 
         # move one unit forward
@@ -555,6 +587,26 @@ def get_location():
         return location
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
         rospy.logerr("Service call failed: %s" % e)
+
+
+def Angle(x1,y1,x2,y2):
+    # return angle of line
+    # right  = 0; down = pi/2 (90) ; left = pi (180) ; up = 3pi/2 (270)
+    if x1 ==x2:
+        if y2 > y1:
+           result = 0.5*math.pi
+        else:
+           result = 1.5*math.pi
+        return result
+
+    result = math.atan((y2-y1)/(x2-x1))
+    if x2 < x1:
+        result = result + math.pi;
+
+    if result < 0:
+        result = result + 2*math.pi
+    result = result * 180 / math.pi  #make degrees
+    return result
 
 
 def too_small_reminder(number, precision=0.0001):
