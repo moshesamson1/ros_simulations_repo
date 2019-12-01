@@ -271,14 +271,17 @@ def move_from_x_to_y_using_angle(source, target):
     move_forward_msg.linear.x = 0.5
     stay_put_msg = Twist()
     not_reached = True
+    is_fixing = False
+    max_distance = get_linear_distance_from_slot(target)
     while not_reached:
         Globals.pub.publish(move_forward_msg)  # publish according to distance?
         distance = get_linear_distance_from_slot(target)
         if distance < 0.05:
             print("REACHED TARGET (%s)!" % target)
             not_reached = False
-        elif distance > 1.25:
+        elif distance > max_distance or distance > 1.25:
             print("PASSED TARGET(%s). set angle toward target and try again." % target)
+            is_fixing = True
             current_location = get_location()
             current_to_y_angle = Angle(current_location[0], current_location[1], target_x, target_y)
             set_orientation((current_to_y_angle) % 360)
@@ -287,6 +290,7 @@ def move_from_x_to_y_using_angle(source, target):
         else:
             # print("still moving toward target...")
             pass
+        max_distance = distance
     Globals.pub.publish(stay_put_msg)
 
 
