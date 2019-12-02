@@ -11,8 +11,8 @@
   <arg name="robot_1_name" default="robot_1"/>
   <arg name="0_x" default="0.0"/>
   <arg name="0_y" default="0.0"/>
-  <arg name="1_x" default="61.0"/>
-  <arg name="1_y" default="63.0"/>
+  <arg name="1_x" default="62.0"/>
+  <arg name="1_y" default="62.0"/>
   <arg name="accelerate_time" default="100"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">

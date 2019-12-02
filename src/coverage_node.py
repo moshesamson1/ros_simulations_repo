@@ -121,14 +121,14 @@ def move_from_x_to_y_using_angle(source, target):
     set_orientation(x_to_y_angle)
 
     move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.5
+    move_forward_msg.linear.x = 1.5
     stay_put_msg = Twist()
     not_reached = True
     max_distance = get_linear_distance_from_slot(target)
     while not_reached:
         Globals.pub.publish(move_forward_msg)  # publish according to distance?
         distance = get_linear_distance_from_slot(target)
-        if distance < 0.05:
+        if distance < 0.1:
             # print("REACHED TARGET (%s)!" % target)
             not_reached = False
         elif distance > max_distance or distance > 1.25:
@@ -200,10 +200,11 @@ def turn_toward(target_orientation_z, eps=0.1):
     rotate_msg = Twist()
     stay_put_msg = Twist()
 
+
     current_angle = np.rad2deg(get_euler_orientation()[2])
     while math.fabs(current_angle % 360.0 - target_orientation_z % 360.0) > eps:
         diff = angle_diff(current_angle, target_orientation_z)
-        rotate_msg.angular.z = sign(diff)*min(0.25, pow(diff, 6)+0.05)
+        rotate_msg.angular.z = sign(diff)*min(0.2, pow(diff, 8)+0.05)
         Globals.pub.publish(rotate_msg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
 
