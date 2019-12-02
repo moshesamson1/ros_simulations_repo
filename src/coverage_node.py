@@ -95,9 +95,10 @@ def main():
         # move the robot along the coverage path
         # ignore first step of the path, as it is the starting position
         print("Run over graph...")
-        for p_ind in tqdm.tqdm(xrange(1, len(path))):
+        pos = 0 if Globals.robot_name == "robot_0" else 1
+        for p_ind in tqdm.tqdm(xrange(1, len(path)), position=pos):
             move_from_x_to_y_using_angle(path[p_ind - 1], path[p_ind])
-            # print("moving from %s to %s" % (path[p_ind - 1], path[p_ind]))
+            # print("(%s) moving from %s to %s" % (Globals.robot_name, path[p_ind - 1], path[p_ind]))
 
         positions_file = open(Globals.absolute_path + "/%s_positions" % Globals.robot_name, "a+")
         positions_file.writelines(positions)
@@ -114,7 +115,6 @@ def move_from_x_to_y_using_angle(source, target):
     :param target: move to
     :return:
     """
-    # should compute again between world positons and not grid positions!
     (source_x, source_y) = grid_to_world(source)
     (target_x, target_y) = grid_to_world(target)
     x_to_y_angle = Angle(source_x, source_y, target_x, target_y)
@@ -135,7 +135,7 @@ def move_from_x_to_y_using_angle(source, target):
             # print("PASSED TARGET(%s). set angle toward target and try again." % target)
             current_location = get_location()
             current_to_y_angle = Angle(current_location[0], current_location[1], target_x, target_y)
-            set_orientation((current_to_y_angle) % 360)
+            set_orientation(current_to_y_angle % 360)
         else:
             # print("still moving toward target...")
             pass
@@ -195,18 +195,16 @@ def turn_toward(target_orientation_z, eps=0.1):
     """
 
     angle_diff = lambda source, target: (target - source + 180) % 360 - 180
+    sign = lambda x: 1 if x > 0 else -1
 
-    rotate_msg_pos = Twist()
-    rotate_msg_pos.angular.z = 0.05
-
-    rotate_msg_neg = Twist()
-    rotate_msg_neg.angular.z = -0.05
-
+    rotate_msg = Twist()
     stay_put_msg = Twist()
-    current_angle = np.rad2deg(get_euler_orientation()[2])
 
+    current_angle = np.rad2deg(get_euler_orientation()[2])
     while math.fabs(current_angle % 360.0 - target_orientation_z % 360.0) > eps:
-        Globals.pub.publish(rotate_msg_pos if angle_diff(current_angle, target_orientation_z) > 0 else rotate_msg_neg)
+        diff = angle_diff(current_angle, target_orientation_z)
+        rotate_msg.angular.z = sign(diff)*min(0.25, pow(diff, 6)+0.05)
+        Globals.pub.publish(rotate_msg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
 
     Globals.pub.publish(stay_put_msg)

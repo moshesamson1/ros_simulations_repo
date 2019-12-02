@@ -11,8 +11,8 @@
   <arg name="robot_1_name" default="robot_1"/>
   <arg name="0_x" default="0.0"/>
   <arg name="0_y" default="0.0"/>
-  <arg name="1_x" default="34.65"/>
-  <arg name="1_y" default="665.349"/>
+  <arg name="1_x" default="61.0"/>
+  <arg name="1_y" default="63.0"/>
   <arg name="accelerate_time" default="100"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -48,7 +48,7 @@
   </group>
  
 
-  <!--group ns="$(arg robot_1_name)_ns">
+  <group ns="$(arg robot_1_name)_ns">
 	<param name="tf_prefix" value="$(arg robot_1_name)"/>
  	  <include file="$(find comp_cov_sim)/launch/includes/kobuki.launch.xml">
 	    	<arg name="base" value="$(arg base)"/>
@@ -68,7 +68,7 @@
 		<param name="robot_name" value="$(arg robot_1_name)"/>
 		<param name="init_pos" value="$(arg 1_x) $(arg 1_y)"/>
 	</node>
-  </group-->
+  </group>
  
   
   <!-- Fake laser -->
