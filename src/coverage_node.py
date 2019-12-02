@@ -12,16 +12,16 @@ from random import seed
 
 import numpy as np
 import tf
+import tqdm
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
 from tf import transformations
 from turtlesim.msg import Pose
 
 from Coverage import *
-from Entities import Direction, deprecated
+from Entities import Direction
 from globals import Globals
 
-# positions_file = open(globals.absolute_path + "/%s_positions" % globals.robot_name, "a+")
 DIRECTION_Z = Direction.Z
 positions = []
 
@@ -32,112 +32,6 @@ def pose_callback(pose_msg):
     Globals.position_file.write(pose_msg.position + "\n")
 
     return
-
-
-def move(last_d, new_d, distance=0.0, percentage=0.0, use_map=True):
-    if not use_map:
-        move_blindly(last_d, new_d, distance, percentage)
-    else:
-        move_smartly(last_d, new_d, percentage)
-
-
-def move_smartly(last_d, new_d, percentage):
-    current_grid_location = world_to_grid_location(get_location())
-
-    print "(%s) <%s> Moving %s -> %s ..." % (Globals.robot_name, current_grid_location, last_d, new_d)
-    print "(%s) facing angle: %s" % (Globals.robot_name, np.rad2deg(get_euler_orientation()[2]))
-
-    angle = get_angle_from_directions(last_d, new_d)
-
-    print "(%s) get_euler_orientation()[2]: %s" % (Globals.robot_name, get_euler_orientation()[2])
-    print "(%s) angle: %s" % (Globals.robot_name, angle)
-
-    # handle going to specific place...
-    turn_toward(np.rad2deg(get_euler_orientation()[2] + angle))
-    current_location_grid = world_to_grid_location(get_location())
-    move_toward(Entities.Slot(current_location_grid[0], current_location_grid[1]).GoByDirection(new_d), new_d)
-    # Done.
-
-    print "Done. <%s> %f" % (world_to_grid_location(get_location()), percentage)
-
-
-def get_angle_from_directions(last_d, new_d):
-    if last_d == Direction.Z:
-        if new_d == Direction.N:
-            angle = np.pi / 2
-        elif new_d == Direction.W:
-            angle = np.pi
-        elif new_d == Direction.S:
-            angle = -np.pi / 2
-        elif new_d == Direction.E:
-            angle = 0.0
-        else:
-            print("possible error in get_angle_from_directions. new Direction: ")
-            print new_d
-            angle = 0.0
-    else:
-        if (last_d == Direction.W and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.E) or \
-                (last_d == Direction.E and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.W):
-            angle = -np.pi / 2
-        elif (last_d == Direction.W and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.E) or \
-                (last_d == Direction.E and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.W):
-            angle = np.pi / 2
-        elif last_d == new_d:
-            angle = 0
-        else:
-            rospy.logerr("Wrong directions. trying to switch from %s to %s" % (last_d, new_d))
-            exit(-1)
-    return angle
-
-
-@deprecated
-def move_blindly(last_d, new_d, distance, percentage):
-    print "(%s) Moving %s -> %s ..." % (Globals.robot_name, last_d, new_d)
-
-    # todo: use vectors to represent direction and compute angles
-    if (last_d == Direction.W and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.E) or \
-            (last_d == Direction.E and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.W):
-        rotation_angle_deg = 90
-    elif (last_d == Direction.W and new_d == Direction.S) or (last_d == Direction.S and new_d == Direction.E) or \
-            (last_d == Direction.E and new_d == Direction.N) or (last_d == Direction.N and new_d == Direction.W):
-        rotation_angle_deg = -90
-    elif last_d == Direction.Z or last_d == new_d:
-        rotation_angle_deg = 0
-    else:
-        rospy.logerr("Wrong directions. trying to switch from %s to %s" % (last_d, new_d))
-        exit(-1)
-
-    angle = np.deg2rad(rotation_angle_deg)
-    angle_vel = angle * 0.5  # angular speed
-
-    move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.5  # directional speed
-    rotate_msg = Twist()
-    rotate_msg.angular.z = angle_vel
-    stay_put_msg = Twist()
-
-    t0 = rospy.Time.now().to_sec()
-    current_angle = 0.0
-    while current_angle < angle:
-        Globals.pub.publish(rotate_msg)
-        t1 = rospy.Time.now().to_sec()
-        current_angle = angle_vel * (t1 - t0)
-
-    Globals.pub.publish(stay_put_msg)
-
-    current_distance = 0.0
-    t0 = rospy.Time.now().to_sec()
-    while current_distance < distance:
-        Globals.pub.publish(move_forward_msg)
-        t1 = rospy.Time.now().to_sec()
-        current_distance = 0.5 * (t1 - t0)
-
-    Globals.pub.publish(stay_put_msg)
-
-    print "Done. %f" % percentage
-
-
-
 
 
 def main():
@@ -198,40 +92,12 @@ def main():
         path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
         print("Done.")
 
-        # ~~~
-        last_p = path[0]
-        last_d = DIRECTION_Z
-
         # move the robot along the coverage path
         # ignore first step of the path, as it is the starting position
         print("Run over graph...")
-        for p_ind in xrange(1, len(path)):
-            print("moving from %s to %s" % (path[p_ind - 1], path[p_ind]))
+        for p_ind in tqdm.tqdm(xrange(1, len(path))):
             move_from_x_to_y_using_angle(path[p_ind - 1], path[p_ind])
-
-        # for p_ind in xrange(1, len(path)):
-        #     p = path[p_ind]
-        #     percentage = float(p_ind) / float(len(path))
-        #
-        #     location, location_grid, current_direction = move_from_a_to_b(last_d, last_p, p, percentage)
-        #     print("After moving to %s. Location: %s , Grid: %s" % (p, location, location_grid))
-        #
-        #     location_grid_slot = Entities.Slot(location_grid[0], location_grid[1])
-        #     while not location_grid_slot == p:
-        #         print("Aimed for: %s and reached %s. Create path and move toward correct position" %
-        #               (p, location_grid_slot))
-        #         correction_path = create_path_from_a_to_b(location_grid_slot, p)
-        #
-        #         current_grid_location = location_grid_slot
-        #         for cp in correction_path[1:]:
-        #             print("CORRECTION: moving from %s to %s" % (current_grid_location, cp))
-        #             location, location_grid, current_direction = move_from_a_to_b(current_direction,
-        #                                                                                   current_grid_location,
-        #                                                                                   cp,
-        #                                                                                   0.0)
-        #             current_grid_location = Entities.Slot(location_grid[0], location_grid[1])
-        #
-        #     last_d, last_p = current_direction, p
+            # print("moving from %s to %s" % (path[p_ind - 1], path[p_ind]))
 
         positions_file = open(Globals.absolute_path + "/%s_positions" % Globals.robot_name, "a+")
         positions_file.writelines(positions)
@@ -241,52 +107,35 @@ def main():
         rospy.logerr("Service call failed: %s" % e)
 
 
-def create_path_from_a_to_b(location_grid_slot, p):
-    x_sign = 1 if p.row > location_grid_slot.row else -1
-    x_moves = [Entities.Slot(x, location_grid_slot.col) for x in range(location_grid_slot.row, p.row + x_sign, x_sign)]
-
-    y_sign = 1 if p.col > location_grid_slot.col else -1
-    y_moves = [Entities.Slot(p.row, y) for y in range(location_grid_slot.col, p.col + y_sign, y_sign)]
-
-    correction_moves = []
-    correction_moves.extend(x_moves)
-    correction_moves.extend(y_moves)
-    return correction_moves
-
-
 def move_from_x_to_y_using_angle(source, target):
     """
-    :param x:
-    :param y:
+    Move from source to target. If missed, stop, recalculate direction and try again until succeeds
+    :param source: move from
+    :param target: move to
     :return:
     """
     # should compute again between world positons and not grid positions!
     (source_x, source_y) = grid_to_world(source)
     (target_x, target_y) = grid_to_world(target)
     x_to_y_angle = Angle(source_x, source_y, target_x, target_y)
-    # facing_angle = np.rad2deg(get_euler_orientation()[2])
     set_orientation(x_to_y_angle)
 
     move_forward_msg = Twist()
     move_forward_msg.linear.x = 0.5
     stay_put_msg = Twist()
     not_reached = True
-    is_fixing = False
     max_distance = get_linear_distance_from_slot(target)
     while not_reached:
         Globals.pub.publish(move_forward_msg)  # publish according to distance?
         distance = get_linear_distance_from_slot(target)
         if distance < 0.05:
-            print("REACHED TARGET (%s)!" % target)
+            # print("REACHED TARGET (%s)!" % target)
             not_reached = False
         elif distance > max_distance or distance > 1.25:
-            print("PASSED TARGET(%s). set angle toward target and try again." % target)
-            is_fixing = True
+            # print("PASSED TARGET(%s). set angle toward target and try again." % target)
             current_location = get_location()
             current_to_y_angle = Angle(current_location[0], current_location[1], target_x, target_y)
             set_orientation((current_to_y_angle) % 360)
-            # set_orientation((x_to_y_angle+180)%360)
-            # after 'passing' the target, we switched direction and try again to reach the target. we do so until we
         else:
             # print("still moving toward target...")
             pass
@@ -294,40 +143,8 @@ def move_from_x_to_y_using_angle(source, target):
     Globals.pub.publish(stay_put_msg)
 
 
-
-def move_from_a_to_b(last_d, last_p, p, percentage):
-    """
-    This method assumes movement only in 90deg. trying to correct position accordingly
-    :param last_d:
-    :param last_p:
-    :param p:
-    :param percentage:
-    :return:
-    """
-    if last_p.decrease_rows() == p:
-        new_d = Direction.S
-    elif last_p.increase_cols() == p:
-        new_d = Direction.E
-    elif last_p.increase_rows() == p:
-        new_d = Direction.N
-    else:
-        new_d = Direction.W
-    relative_turn_rad = get_angle_from_directions(last_d, new_d)
-    init_dir = get_angle_from_directions(Direction.Z, last_d)
-    absolute_direction_deg = np.rad2deg(init_dir + relative_turn_rad)
-    print("<%s> Moving %s -> %s (%s)" % (percentage, last_p, p, absolute_direction_deg))
-    # set orientation and move
-    set_orientation(absolute_direction_deg)
-    move_toward_correct_direction(p, new_d, absolute_direction_deg)
-    location = get_location()
-    location_grid = world_to_grid_location(location)
-    return location, location_grid, new_d
-
-
 def get_publisher_and_subscriber():
-    # Publisher - context is inside namespace
     Globals.pub = rospy.Publisher("mobile_base/commands/velocity", Twist, queue_size=10)
-    # Listener for pose
     Globals.sub = rospy.Subscriber(Globals.robot_name + "/pose", Pose, pose_callback)
 
 
@@ -345,245 +162,28 @@ def get_parameters():
 
 
 def set_orientation(target_orientation_z):
-    print("*** set_orientation to %d ***" % target_orientation_z)
+    # print("*** set_orientation to %d ***" % target_orientation_z)
     turn_toward(target_orientation_z)
-    print "Done set_orientation."
-
-
-def get_distance_from_slot(s, index):
-    """
-    Get the distance to the given slot s, in specific axis indicated by index
-    :param s: the slot measuring distance from
-    :param index: the axis in which the distance is measured.
-    :return: the distance
-    """
-    world_location = get_location()
-    distance = math.fabs(s.row - (world_location[1] / 2.0)) if index == 0 else math.fabs(
-        s.col - (world_location[0] / 2.0))
-    print("(dis): distance: %s" % distance)
-    assert distance < 5
-    return distance
+    # print "Done set_orientation."
 
 
 def get_linear_distance_from_slot(slot):
     """
     :type (Entities.Slot)->int
     Get the linear distance from the current position to the given slot s
-    :param s: the slot measuring distance from
+    :param slot: the slot measuring distance from
     :return: the distance
     """
     world_location = get_location()
     dist_1 = math.pow(slot.row - (world_location[1] / 2.0), 2)
     dist_2 = math.pow(slot.col - (world_location[0] / 2.0), 2)
     distance = math.sqrt(dist_1 + dist_2)
-    # print("(lin_dis): linear distance: %s" % distance)
-    # assert distance < 3
     return distance
-
-
-def is_new_distance_lower(old, new):
-    print("old: %s" % old)
-    print("new: %s" % new)
-    return new < old
-
-
-@deprecated
-def is_world_in_grid_slot(s, index, eps=0.05):
-    """
-    This method is faulted and should be checked!
-    :param s:
-    :param index:
-    :param eps:
-    :return:
-    """
-    # type: (Entities.Slot, int, float) -> bool
-    world_location = get_location()
-    return_location = math.fabs(s.row - (world_location[1] / 2.0)) <= eps if index == 0 else math.fabs(
-        s.col - (world_location[0] / 2.0)) <= eps
-    # print("(is_world_in_grid_slot): world_location: %s" % return_location)
-    return return_location
 
 
 def grid_to_world(target_position):
     # type: (Entities.Slot) -> tuple
     return target_position.col * 2.0, target_position.row * 2.0
-
-
-@deprecated
-def unit_vector(vector):
-    """ Returns the unit vector of the vector.  """
-    return vector / np.linalg.norm(vector)
-
-
-@deprecated
-def angle_between(v1, v2):
-    """
-    :type (tuple, tuple) -> float
-    :param v1:
-    :param v2:
-    :return:
-    """
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-            >>> angle_between((1, 0, 0), (0, 1, 0))
-            1.5707963267948966
-            >>> angle_between((1, 0, 0), (1, 0, 0))
-            0.0
-            >>> angle_between((1, 0, 0), (-1, 0, 0))
-            3.141592653589793
-    """
-    v1_u = unit_vector(v1)
-    v2_u = unit_vector(v2)
-    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
-
-
-def passed_target(d1, d2, d3, d4, d5):
-    """
-    Check if missed target by THIS much (distance from  target is low then high again.
-    The distance should have been high, then go low... and if high again it means that we passed local minima of
-    distance.
-    [d1: before two steps] -> [d2: before 1 steps] -> [d3: target] -> [d4: after 1 steps] -> [d5: after two steps]
-    :param d5:
-    :param d4:
-    :param d1:
-    :param d2:
-    :param d3:
-    :return:
-    """
-    # print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
-
-    # cond = d1 >= d2 >= d3 and d3 < d4 < d5
-    cond = (d1 > d2 or d1 > d3 or d1 > d4) and (d5 > d4 or d5 > d3 or d5 > d2)
-    if cond:
-        print("Passed Target!")
-
-    # sanity checks
-    assert d5 < 5
-    # The following sanity check caused more errors than good, therefore removed for now.
-    # if d1 < d2 < d3 < d4 < d5:
-    #     print("wrong distances - all in reverse!")
-    #     print("d1,d2,d3,d4,d5: %s,%s,%s,%s,%s" % (d1, d2, d3, d4, d5))
-    #     exit(-1)
-
-    return cond
-
-
-def assert_positive_location_fix_otherwise(current_location, current_orientation):
-    move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.05
-    stay_put_msg = Twist()
-
-    if current_location[0] >= -0.5 and current_location[1] >= -0.5:
-        return current_location
-
-    fixed_location = current_location
-
-    for i in [0, 1]:
-        if current_location[i] < -0.5:  # fix y location
-            set_orientation(0.0 if i == 0 else 90.0)
-            while fixed_location[i] < 0:
-                Globals.pub.publish(move_forward_msg)
-                fixed_location = get_location()
-                Globals.pub.publish(stay_put_msg)
-                print("current location: (%s,%s)" % (fixed_location[0], fixed_location[1]))
-            Globals.pub.publish(stay_put_msg)
-            set_orientation(current_orientation)
-
-    print("fixing from %s to %s" % (current_location, fixed_location))
-    return fixed_location
-
-
-def move_toward_correct_direction(target_position, direction, target_orientation_z, eps=0.01):
-    # type: (Entities.Slot, Direction, float, float) -> None
-    move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.5
-    stay_put_msg = Twist()
-
-    # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
-    index = 0 if (direction == Direction.N or direction == Direction.S) else 1
-
-    # initiate indices
-    d1, d2, d3, d4, d5 = 0, 3, 2, 1, round(get_distance_from_slot(target_position, index), 3)
-
-    while not passed_target(d1, d2, d3, d4, d5):
-        time.sleep(0.01)  # do we need that???
-
-        # move one unit forward
-        Globals.pub.publish(move_forward_msg)
-        # Globals.pub.publish(stay_put_msg)
-
-        current_location = assert_positive_location_fix_otherwise(get_location(), target_orientation_z)
-
-        # update parameters
-        d1, d2, d3, d4, d5 = d2, d3, d4, d5, round(get_distance_from_slot(target_position, index), 3)
-
-        # correct orientation every single whole unit of map
-        if current_location[1 if (direction == Direction.N or direction == Direction.S) else 0] % 1.0 < 0.05:
-            turn_toward(target_orientation_z, 0.005)
-
-        grid_position = world_to_grid_location(current_location)
-        try:
-            assert round(grid_position[0]) >= 0
-            assert round(grid_position[1]) >= 0
-            assert round(grid_position[0]) <= 32
-            assert round(grid_position[1]) <= 32
-        except:
-            print "Assertion Error: value out of range!"
-            print(grid_position)
-            exit(-1)
-
-    print("Reached target (%s,%s)." % (current_location[0], current_location[1]))
-
-
-@deprecated
-def move_toward(target_position, direction):
-    # type: (Entities.Slot, Direction) -> None
-    """
-    moving from current location to specific location, in a straight line. Always move forward, after robot was rotated.
-    :param target_position:
-    :param direction:
-    :param eps:
-    :return:
-    """
-    print "(%s) move_toward" % Globals.robot_name
-    move_forward_msg = Twist()
-    move_forward_msg.linear.x = 0.05
-    stay_put_msg = Twist()
-
-    current_location = get_location()
-
-    # compute index to compare against. If moving south or north, compare rows. Otherwise compare columns
-    index = 1 if direction == Direction.N or direction == Direction.S else 0
-    while world_to_grid_location(current_location)[index] != float(target_position[index]):
-        Globals.pub.publish(move_forward_msg)
-        current_location = get_location()
-
-        print "(%s) current_location: %s, target_location:  %s" % (
-            Globals.robot_name, current_location, target_position)
-        grid_position = world_to_grid_location(current_location)
-        try:
-            assert round(grid_position[0]) >= 0
-            assert round(grid_position[1]) >= 0
-            assert round(grid_position[0]) <= 99
-            assert round(grid_position[1]) <= 99
-        except:
-            print "ERROR: "
-            print(grid_position)
-            exit(-1)
-        # counter += 1
-
-    Globals.pub.publish(stay_put_msg)
-    print "Done."
-
-def angle_diff(source, target):
-    """
-    Return the difference between two angle
-    :param source: source angle (deg)
-    :param target: target angle (deg)
-    :return: The difference (deg)
-    """
-    a = target - source
-    a = (a + 180) % 360 - 180
-    return a
 
 
 def turn_toward(target_orientation_z, eps=0.1):
@@ -594,7 +194,7 @@ def turn_toward(target_orientation_z, eps=0.1):
     :return: None
     """
 
-    # print "(%s) turning toward %s" % (Globals.robot_name, target_orientation_z)
+    angle_diff = lambda source, target: (target - source + 180) % 360 - 180
 
     rotate_msg_pos = Twist()
     rotate_msg_pos.angular.z = 0.05
@@ -610,12 +210,6 @@ def turn_toward(target_orientation_z, eps=0.1):
         current_angle = np.rad2deg(get_euler_orientation()[2])
 
     Globals.pub.publish(stay_put_msg)
-
-
-def log_location_info():
-    location = get_location()
-    grid_location = world_to_grid_location(location)
-    positions.append("(%s) : %f,%f -> %s \n" % (Globals.robot_name, location[0], location[1], grid_location))
 
 
 def get_euler_orientation():
@@ -642,33 +236,36 @@ def get_location():
         location = (round(trans[0]) if too_small_reminder(trans[0]) else trans[0],
                     round(trans[1]) if too_small_reminder(trans[1]) else trans[1])
 
-        # if location[0] < -1:
-        #     print "location < -1"
-        #     print location
-        #     print trans
-
         return location
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException), e:
         rospy.logerr("Service call failed: %s" % e)
 
 
-def Angle(x1,y1,x2,y2):
+def Angle(x1, y1, x2, y2):
+    """
+    Return the angle of the vector: (x1,y1)--->(x1,y2)
+    :param x1: s.e.
+    :param y1: s.e.
+    :param x2: s.e.
+    :param y2: s.e.
+    :return: the angle between
+    """
     # return angle of line
     # right  = 0; down = pi/2 (90) ; left = pi (180) ; up = 3pi/2 (270)
-    if x1 ==x2:
+    if x1 == x2:
         if y2 > y1:
-           result = 0.5*math.pi
+            result = 0.5 * math.pi
         else:
-           result = 1.5*math.pi
+            result = 1.5 * math.pi
         return result
 
-    result = math.atan((y2-y1)/(x2-x1))
+    result = math.atan((y2 - y1) / (x2 - x1))
     if x2 < x1:
-        result = result + math.pi;
+        result = result + math.pi
 
     if result < 0:
-        result = result + 2*math.pi
-    result = result * 180 / math.pi  #make degrees
+        result = result + 2 * math.pi
+    result = result * 180 / math.pi
     return result
 
 
