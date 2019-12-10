@@ -95,8 +95,7 @@ def main():
         # move the robot along the coverage path
         # ignore first step of the path, as it is the starting position
         print("Run over graph...")
-        pos = 0 if Globals.robot_name == "robot_0" else 1
-        for p_ind in tqdm.tqdm(xrange(1, len(path)), position=pos):
+        for p_ind in tqdm.tqdm(xrange(1, len(path)), position=int(Globals.robot_name[-1]) % 2):
             move_from_x_to_y_using_angle(path[p_ind - 1], path[p_ind])
             # print("(%s) moving from %s to %s" % (Globals.robot_name, path[p_ind - 1], path[p_ind]))
 
