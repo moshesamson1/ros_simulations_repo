@@ -139,7 +139,7 @@ def move_from_x_to_y_using_angle(source, target):
             # print("still moving toward target...")
             pass
         max_distance = distance
-    Globals.pub.publish(stay_put_msg)
+    # Globals.pub.publish(stay_put_msg)
 
 
 def get_publisher_and_subscriber():
@@ -199,7 +199,7 @@ def turn_toward(target_orientation_z, eps=0.1):
     rotate_msg = Twist()
     stay_put_msg = Twist()
 
-
+    Globals.pub.publish(stay_put_msg)
     current_angle = np.rad2deg(get_euler_orientation()[2])
     while math.fabs(current_angle % 360.0 - target_orientation_z % 360.0) > eps:
         diff = angle_diff(current_angle, target_orientation_z)
