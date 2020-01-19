@@ -10,7 +10,7 @@ Startup process:
   
 
 Setting the real time factor:
-in the empty.world file, chane the real time factor.
+in the empty.world file, change the real time factor.
 
 Setting multiple ros masters and gazebo servers:
   in each terminal:
