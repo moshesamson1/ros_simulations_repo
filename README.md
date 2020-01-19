@@ -1,6 +1,6 @@
 # ros_simulations_repo
 
-Startup process:
+Single Startup process:
 
   cd ~/catkin_ws
   source devel/setup.bash
@@ -17,3 +17,6 @@ Setting multiple ros masters and gazebo servers:
     export $ROS_MASTER_URI=http://localhost:11311 (or any other port)
     export $GAZEBO_MASTER_URI=http://localhost:11345 (or any other port)
     in the ROSLAUNCH call, add "--port=11311" in the end, for the ros master uri. 
+
+Running simulations via script:
+  Run "./Set.sh", and enter the desired number of simulations 
