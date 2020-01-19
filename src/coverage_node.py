@@ -13,6 +13,7 @@ from random import seed
 import numpy as np
 import tf
 import tqdm
+from bondpy import bondpy
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
 from tf import transformations
@@ -21,6 +22,7 @@ from turtlesim.msg import Pose
 from Coverage import *
 from Entities import Direction
 from globals import Globals
+from logs import logStep, logAllSteps
 
 DIRECTION_Z = Direction.Z
 positions = []
@@ -42,6 +44,12 @@ def main():
     get_parameters()
 
     get_publisher_and_subscriber()
+
+    # generate bond
+    bond = bondpy.Bond("session_topic", "session_id")
+    bond.start()
+    if not bond.wait_until_formed(rospy.Duration(9.0)):
+        raise Exception('Bond could not be formed')
 
     # initiate map service
     rospy.wait_for_service('static_map')
@@ -97,11 +105,17 @@ def main():
         print("Run over graph...")
         for p_ind in tqdm.tqdm(xrange(1, len(path)), position=int(Globals.robot_name[-1]) % 2):
             move_from_x_to_y_using_angle(path[p_ind - 1], path[p_ind])
-            # print("(%s) moving from %s to %s" % (Globals.robot_name, path[p_ind - 1], path[p_ind]))
+            logStep(path[p_ind], time.time())
 
-        positions_file = open(Globals.absolute_path + "/%s_positions" % Globals.robot_name, "a+")
-        positions_file.writelines(positions)
-        positions_file.close()
+        logAllSteps()
+
+        if Globals.is_manager:
+            print("manager node is waiting for other node")
+            bond.wait_until_broken()
+        else:
+            print("other node has finished and breaking the bond")
+            bond.break_bond()
+
 
     except rospy.ServiceException, e:
         rospy.logerr("Service call failed: %s" % e)
@@ -124,6 +138,7 @@ def move_from_x_to_y_using_angle(source, target):
     stay_put_msg = Twist()
     not_reached = True
     max_distance = get_linear_distance_from_slot(target)
+    # todo: fix conditions!
     while not_reached:
         Globals.pub.publish(move_forward_msg)  # publish according to distance?
         distance = get_linear_distance_from_slot(target)
@@ -158,6 +173,10 @@ def get_parameters():
     if rospy.has_param('~init_pos'):
         str_pos = rospy.get_param('~init_pos').split()
         Globals.init_pos = float(str_pos[0]), float(str_pos[1])
+
+    if rospy.has_param('~is_manager'):
+        Globals.is_manager = bool(rospy.get_param('~is_manager'))
+        rospy.logwarn(str(Globals.robot_name) + ' is manager? ' + str(Globals.is_manager))
 
 
 def set_orientation(target_orientation_z):

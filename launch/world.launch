@@ -43,10 +43,11 @@
 
 			<!-- Launch coverage node -->
 			
-			<node name="coverage_node" pkg="comp_cov_sim" type="coverage_node.py" output="screen">
+			<node name="coverage_node" pkg="comp_cov_sim" type="coverage_node.py" output="screen" required="True">
 				<param name="robot_size" value="0.35"/>
 				<param name="robot_name" value="$(arg robot_0_name)"/>
 				<param name="init_pos" value="$(arg 0_x) $(arg 0_y)"/>
+				<param name="is_manager" value="True"/>
 			</node>
 		</group>
  </group>
@@ -70,6 +71,7 @@
 		<param name="robot_size" value="0.35"/>
 		<param name="robot_name" value="$(arg robot_1_name)"/>
 		<param name="init_pos" value="$(arg 1_x) $(arg 1_y)"/>
+		<param name="is_manager" value="False"/>
 	</node>
   </group>
 

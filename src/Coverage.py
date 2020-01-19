@@ -68,7 +68,7 @@ def create_covering_path(mst_edges_shallow_graph, initial_slot):
 
     :param mst_edges_shallow_graph:
     :param initial_slot:
-    :return:
+    :rtype: list[Entities.Slot]
     """
     covering_path = []
     origin_slot = initial_slot

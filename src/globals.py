@@ -14,6 +14,7 @@ class Globals:
     absolute_path = os.path.dirname(os.path.realpath(__file__))
     init_pos = None
     response = None
+    is_manager = False
 
     def __init__(self):
         pass
