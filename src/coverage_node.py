@@ -13,11 +13,11 @@ from random import seed
 import numpy as np
 import tf
 import tqdm
-from bondpy import bondpy
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
 from tf import transformations
 from turtlesim.msg import Pose
+from std_msgs.msg import String
 
 from Coverage import *
 from Entities import Direction
@@ -28,12 +28,10 @@ DIRECTION_Z = Direction.Z
 positions = []
 
 
-def pose_callback(pose_msg):
-    # Keep track of robot position:
-    print "+++position callback+++"
-    Globals.position_file.write(pose_msg.position + "\n")
-
-    return
+def status_callback(statusMsg):
+    #:type: String
+    if str(statusMsg.data)=="finished" and Globals.is_finished:
+        Globals.is_terminating = True
 
 
 def main():
@@ -45,11 +43,9 @@ def main():
 
     get_publisher_and_subscriber()
 
-    # generate bond
-    bond = bondpy.Bond("session_topic", "session_id")
-    bond.start()
-    if not bond.wait_until_formed(rospy.Duration(9.0)):
-        raise Exception('Bond could not be formed')
+    # if manager, subscribe to event
+    if Globals.is_manager:
+        rospy.Subscriber("/status", String, status_callback)
 
     # initiate map service
     rospy.wait_for_service('static_map')
@@ -110,12 +106,16 @@ def main():
         logAllSteps()
 
         if Globals.is_manager:
-            print("manager node is waiting for other node")
-            bond.wait_until_broken()
+            Globals.is_finished=True
+            while not Globals.is_terminating:
+                time.sleep(1)
         else:
             print("other node has finished and breaking the bond")
-            bond.break_bond()
 
+            rate = rospy.Rate(0.5)
+            while not rospy.is_shutdown():
+                Globals.status_pub.publish("finished")
+                time.sleep(1)
 
     except rospy.ServiceException, e:
         rospy.logerr("Service call failed: %s" % e)
@@ -135,7 +135,6 @@ def move_from_x_to_y_using_angle(source, target):
 
     move_forward_msg = Twist()
     move_forward_msg.linear.x = 1.5
-    stay_put_msg = Twist()
     not_reached = True
     max_distance = get_linear_distance_from_slot(target)
     # todo: fix conditions!
@@ -159,7 +158,8 @@ def move_from_x_to_y_using_angle(source, target):
 
 def get_publisher_and_subscriber():
     Globals.pub = rospy.Publisher("mobile_base/commands/velocity", Twist, queue_size=10)
-    Globals.sub = rospy.Subscriber(Globals.robot_name + "/pose", Pose, pose_callback)
+    Globals.status_pub = rospy.Publisher("/status", String, queue_size=1)
+    Globals.status_pub.publish("started")
 
 
 def get_parameters():

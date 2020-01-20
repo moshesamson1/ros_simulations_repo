@@ -15,6 +15,10 @@ class Globals:
     init_pos = None
     response = None
     is_manager = False
+    is_other_finished = False
+    is_finished = True
+    status_pub = None
+    is_terminating = False
 
     def __init__(self):
         pass

@@ -18,6 +18,7 @@ gnome-terminal -x bash -c '\n
  source ~/catkin_ws/devel/setup.bash;\
  export ROS_MASTER_URI="$1";\
  export GAZEBO_MASTER_URI="$2";\
- roslaunch comp_cov_sim comp_cov_sim.launch gui:=false --port="$3"; exit' sh $rosUri $gazeboUri $rosPort
+ roslaunch comp_cov_sim comp_cov_sim.launch gui:=false --port="$3";\
+ exit' sh $rosUri $gazeboUri $rosPort
 done
 
