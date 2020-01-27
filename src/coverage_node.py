@@ -12,6 +12,7 @@ from random import seed
 
 import numpy as np
 import tf
+import tf2_ros
 import tqdm
 from geometry_msgs.msg import Twist
 from nav_msgs.srv import GetMap
@@ -234,9 +235,8 @@ def get_euler_orientation():
     Return euler orientation, in radians
     :return:
     """
-    (_, rot_quat) = Globals.tf_listener.lookupTransform("/map",
-                                                        Globals.robot_name + "/base_footprint",
-                                                        rospy.Time(0))
+    t = Globals.tf_listener.getLatestCommonTime("/map", Globals.robot_name + "/base_footprint")
+    (_, rot_quat) = Globals.tf_listener.lookupTransform("/map", Globals.robot_name + "/base_footprint",t)
     rot_euler = tf.transformations.euler_from_quaternion(rot_quat)
     return rot_euler
 
@@ -246,9 +246,8 @@ def get_location():
     :return: The robots location, in base coordinates
     """
     try:
-        (trans, _) = Globals.tf_listener.lookupTransform("/map",
-                                                         Globals.robot_name + "/base_footprint",
-                                                         rospy.Time(0))
+        t = Globals.tf_listener.getLatestCommonTime("/map", Globals.robot_name + "/base_footprint")
+        (trans, _) = Globals.tf_listener.lookupTransform("/map", Globals.robot_name + "/base_footprint", t)
 
         location = (round(trans[0]) if too_small_reminder(trans[0]) else trans[0],
                     round(trans[1]) if too_small_reminder(trans[1]) else trans[1])
