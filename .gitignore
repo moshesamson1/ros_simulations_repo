@@ -1,0 +1,8 @@
+# Default ignored files
+/workspace.xml
+*.pyc
+src/*.pyc
+venv/
+launch/*.swn
+launch/*.swm
+launch/*.swl
