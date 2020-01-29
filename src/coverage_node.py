@@ -236,6 +236,7 @@ def get_euler_orientation():
     :return:
     """
     t = Globals.tf_listener.getLatestCommonTime("/map", Globals.robot_name + "/base_footprint")
+    Globals.tf_listener.waitForTransform("/map", Globals.robot_name + "/base_footprint",t, rospy.Duration(10))
     (_, rot_quat) = Globals.tf_listener.lookupTransform("/map", Globals.robot_name + "/base_footprint",t)
     rot_euler = tf.transformations.euler_from_quaternion(rot_quat)
     return rot_euler
