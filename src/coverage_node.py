@@ -64,6 +64,8 @@ def main():
         Globals.tf_listener = tf.TransformListener()
         Globals.tf_listener.waitForTransform('/map', Globals.robot_name + "/base_footprint", rospy.Time(0),
                                              rospy.Duration(10))
+        print(Globals.tf_listener.getFrameStrings())
+        print(Globals.tf_listener.canTransform("/map", Globals.robot_name + "/base_footprint", rospy.Time(0)))
         print "(%s) after tf" % Globals.robot_name
 
         # point robot to the correct direction
@@ -90,7 +92,6 @@ def main():
         coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
         coarse_grid_graph = create_graph(coarse_grid_edges)
         coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
-        print("Done.")
 
         print("get path from mst...")
         # get coverage path in the fine grid. using the mst of the coarse grid
@@ -235,9 +236,13 @@ def get_euler_orientation():
     Return euler orientation, in radians
     :return:
     """
+    # t = Globals.tf_listener.getLatestCommonTime("/map", Globals.robot_name + "/base_footprint")
+    # Globals.tf_listener.waitForTransform("/map", Globals.robot_name + "/base_footprint",t, rospy.Duration(10))
+    # print(Globals.tf_listener.getFrameStrings())
+    while not Globals.tf_listener.canTransform("/map", Globals.robot_name + "/base_footprint", rospy.Time(0)):
+        time.sleep(0.1)
     t = Globals.tf_listener.getLatestCommonTime("/map", Globals.robot_name + "/base_footprint")
-    Globals.tf_listener.waitForTransform("/map", Globals.robot_name + "/base_footprint",t, rospy.Duration(10))
-    (_, rot_quat) = Globals.tf_listener.lookupTransform("/map", Globals.robot_name + "/base_footprint",t)
+    (_, rot_quat) = Globals.tf_listener.lookupTransform("/map", Globals.robot_name + "/base_footprint", rospy.Time(0))
     rot_euler = tf.transformations.euler_from_quaternion(rot_quat)
     return rot_euler
 
