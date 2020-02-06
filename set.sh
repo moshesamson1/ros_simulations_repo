@@ -19,6 +19,7 @@ gazeboUri="http://localhost:$gazeboPort"
 
 
 echo "Session number $counter, ros path: $rosUri, gazebo path: $gazeboUri"
-env ROS_MASTER_URI="$rosUri" GAZEBO_MASTER_URI="$gazeboUri" roslaunch comp_cov_sim comp_cov_sim.launch gui:=false --port=$rosPort > /dev/null 2>&1 &
+(env ROS_MASTER_URI="$rosUri" GAZEBO_MASTER_URI="$gazeboUri" roslaunch comp_cov_sim comp_cov_sim.launch gui:=false --port=$rosPort > /dev/null 2>&1 &&  ./analize.sh > results_${rosPort}_${gazeboPort} ) & 
+
 done
 
