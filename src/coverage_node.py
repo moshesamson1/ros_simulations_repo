@@ -101,7 +101,7 @@ def main():
         # move the robot along the coverage path
         # ignore first step of the path, as it is the starting position
         print("Run over graph...")
-        for p_ind in tqdm.tqdm(xrange(1, len(path)), position=int(Globals.robot_name[-1]) % 2):
+        for p_ind in tqdm.tqdm(xrange(1, 20), position=int(Globals.robot_name[-1]) % 2):
             move_from_x_to_y_using_angle(path[p_ind - 1], path[p_ind])
             logStep(path[p_ind], time.time())
 
@@ -227,6 +227,7 @@ def turn_toward(target_orientation_z, eps=0.1):
         rotate_msg.angular.z = sign(diff)*min(0.2, pow(diff, 8)+0.05)
         Globals.pub.publish(rotate_msg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
+	time.sleep(0.01)
 
     Globals.pub.publish(stay_put_msg)
 
