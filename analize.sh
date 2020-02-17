@@ -8,24 +8,44 @@ robot_1_data=$(cat $robot1_file)
 
 robot_0_firsts=0
 robot_1_firsts=0
-for i in {0..23}
+for i in {0..31}
 do
-	for j in {0..23}
+	for j in {0..31}
 	do
 		# analyze the current location, and add counter to the earlier visitor
-		robot_0_time=$(echo "$robot_0_data" | grep $i,$j | grep -E '[0-9]+\.[0-9]+' -o)
-		robot_1_time=$(echo "$robot_1_data" | grep $i,$j | grep -E '[0-9]+\.[0-9]+' -o)
+		robot_0_time=$(echo "$robot_0_data" | grep -E "^$i,$j:" | grep -E '[0-9]+\.[0-9]+' -o)
+		robot_1_time=$(echo "$robot_1_data" | grep -E "^$i,$j:" | grep -E '[0-9]+\.[0-9]+' -o)
 		
-		if [[ -z $robot_0_time || -z $robot_1_time ]]
+		# both robots didn't visit this slot	
+		if [[ -z "$robot_1_time" ]] && [[ -z "$robot_0_time" ]]
 		then
 			continue
 		fi
+
+		# in case robot_1 has no slot, but 0 does, increment robot 0 counter	
+		if [[ -z "$robot_1_time" ]] && [[ -n "$robot_0_time" ]]
+		then
+			robot_0_firsts=$((robot_0_firsts+1))
+			echo "1-${i}-${j}"
+			continue
+		fi
+		
+		# in case robot_0 has no slot, but 1 does, increment robot 1 
+		if [[ -z "$robot_0_time" ]] && [[ -n "$robot_1_time" ]]
+		then
+			robot_1_firsts=$((robot_1_firsts+1))
+			echo "2-${i}-${j}"
+			continue
+		fi
+
 	
 		if (( $(echo "$robot_0_time < $robot_1_time" |bc -l) ))
 		then
 			robot_0_firsts=$((robot_0_firsts+1))
+			echo "3-${i}-${j}"
 		else
 			robot_1_firsts=$((robot_1_firsts+1))
+			echo "4-${i}-${j}"
 		fi
 	done
 done
