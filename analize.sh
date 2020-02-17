@@ -26,7 +26,6 @@ do
 		if [[ -z "$robot_1_time" ]] && [[ -n "$robot_0_time" ]]
 		then
 			robot_0_firsts=$((robot_0_firsts+1))
-			echo "1-${i}-${j}"
 			continue
 		fi
 		
@@ -34,7 +33,6 @@ do
 		if [[ -z "$robot_0_time" ]] && [[ -n "$robot_1_time" ]]
 		then
 			robot_1_firsts=$((robot_1_firsts+1))
-			echo "2-${i}-${j}"
 			continue
 		fi
 
@@ -42,10 +40,8 @@ do
 		if (( $(echo "$robot_0_time < $robot_1_time" |bc -l) ))
 		then
 			robot_0_firsts=$((robot_0_firsts+1))
-			echo "3-${i}-${j}"
 		else
 			robot_1_firsts=$((robot_1_firsts+1))
-			echo "4-${i}-${j}"
 		fi
 	done
 done
