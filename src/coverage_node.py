@@ -226,7 +226,7 @@ def turn_toward(target_orientation_z, eps=0.1):
         rotate_msg.angular.z = sign(diff)*min(0.2, pow(diff, 8)+0.05)
         Globals.pub.publish(rotate_msg)
         current_angle = np.rad2deg(get_euler_orientation()[2])
-	time.sleep(0.01)
+	time.sleep(0.0001)
 
     Globals.pub.publish(stay_put_msg)
 
