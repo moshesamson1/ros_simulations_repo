@@ -13,6 +13,7 @@
 	<arg name="0_y" default="0.0"/>
 	<arg name="1_x" default="62.0"/>
 	<arg name="1_y" default="62.0"/>
+	<arg name="seed" default="0"/>
 	<arg name="accelerate_time" default="100"/>
   
 
@@ -72,6 +73,7 @@
 		<param name="robot_name" value="$(arg robot_1_name)"/>
 		<param name="init_pos" value="$(arg 1_x) $(arg 1_y)"/>
 		<param name="is_manager" value="False"/>
+		<param name="seed" value="$(arg seed)"/>
 	</node>
   </group>
 

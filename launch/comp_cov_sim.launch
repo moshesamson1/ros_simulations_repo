@@ -8,6 +8,7 @@
 	<arg name="accelerate_time" default="100"/>
 	<arg name="robot_0_name" default="robot_0"/>
 	<arg name="robot_1_name" default="robot_1"/>
+	<arg name="seed" default="0"/>
     	<param name="/use_sim_time" value="true" />  
   	
 	<!-- Launch turtle bot world -->
@@ -18,6 +19,7 @@
 		<arg name="1_x" value="$(arg 1_x)"/>
 		<arg name="1_y" value="$(arg 1_y)"/>
 		<arg name="robot_0_name" value="$(arg robot_0_name)"/>
-		<arg name="robot_1_name" value="$(arg robot_1_name)"/>	
+		<arg name="robot_1_name" value="$(arg robot_1_name)"/>
+		<arg name="seed" value="$(arg seed)"/>
 	</include>
 </launch>
