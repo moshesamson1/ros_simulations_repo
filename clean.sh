@@ -1,1 +1,4 @@
-find . -name "11*" -delete
+find . -name "113*" -delete
+find . -name "*_results" -delete
+find . -name "_output*" -delete
+find . -name "_steps" -delete
