@@ -1,1 +1,1 @@
-find . -name "1131*" -delete
+find . -name "11*" -delete
