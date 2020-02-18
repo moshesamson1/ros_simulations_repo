@@ -8,7 +8,6 @@
 
 import sys
 import time
-from random import seed
 
 import numpy as np
 import tf
@@ -315,6 +314,4 @@ def world_to_grid_location(world_location):
 
 
 if __name__ == "__main__":
-    # Globals()
-    seed(1)
     main()
