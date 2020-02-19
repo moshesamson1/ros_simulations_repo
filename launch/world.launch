@@ -15,6 +15,7 @@
 	<arg name="1_y" default="62.0"/>
 	<arg name="seed" default="0"/>
 	<arg name="accelerate_time" default="100"/>
+	<arg name="0_strategy" default="MST"/>
   
 
   <group>
@@ -49,6 +50,8 @@
 				<param name="robot_name" value="$(arg robot_0_name)"/>
 				<param name="init_pos" value="$(arg 0_x) $(arg 0_y)"/>
 				<param name="is_manager" value="True"/>
+				<param name="io" value="$(arg 1_x) $(arg 1_y)"/>
+				<param name="strategy" value="$(arg 0_strategy)"/>
 			</node>
 		</group>
  </group>

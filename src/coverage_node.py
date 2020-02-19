@@ -76,27 +76,28 @@ def main():
         starting_location = get_location()
         starting_location_grid = world_to_grid_location(starting_location)
 
-        print "(%s) init pos: %s" % (Globals.robot_name, str(Globals.init_pos))
-        print "(%s) starting location: %s" % (Globals.robot_name, str(starting_location))
-        print "(%s) starting location grid: %s" % (Globals.robot_name, str(starting_location_grid))
 
-        # switch to coarse grid cell, each cell of size 4D
-        switch_to_coarse_grid()
-        print "(%s) angle switch_to_coarse_grid set: %s" % (Globals.robot_name, np.rad2deg(get_euler_orientation()[2]))
+        if Globals.strategy == "MST":
+            # switch to coarse grid cell, each cell of size 4D
+            switch_to_coarse_grid()
+            starting_location_coarse_grid = int((starting_location_grid[0] - 1) / 2.0), int(
+                (starting_location_grid[1] - 1) / 2.0)
 
-        starting_location_coarse_grid = int((starting_location_grid[0] - 1) / 2.0), int(
-            (starting_location_grid[1] - 1) / 2.0)
-        print "(%s) starting_location_coarse_grid: %s" % (Globals.robot_name, str(starting_location_coarse_grid))
+            print("get coarse grid mst...")
+            coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
+            coarse_grid_graph = create_graph(coarse_grid_edges)
+            coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
 
-        print("get coarse grid mst...")
-        coarse_grid_edges = get_edges_from_grid(globals.coarse_grid)
-        coarse_grid_graph = create_graph(coarse_grid_edges)
-        coarse_grid_mst = mst(starting_location_coarse_grid, coarse_grid_graph)
+            print("get path from mst...")
+            # get coverage path in the fine grid. using the mst of the coarse grid
+            path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
+            print("Done.")
+        elif Globals.strategy == "LCP":
+            # compute lcp
+            print("computing LCP")
+            path=create_lcp(starting_location_grid, world_to_grid_location(Globals.io))
+            print("Done.")
 
-        print("get path from mst...")
-        # get coverage path in the fine grid. using the mst of the coarse grid
-        path = get_coverage_path_from_mst(coarse_grid_mst, starting_location_grid)
-        print("Done.")
 
         # move the robot along the coverage path
         # ignore first step of the path, as it is the starting position
@@ -183,11 +184,16 @@ def get_parameters():
     if rospy.has_param('~seed'):
         seed(rospy.get_param('~seed'))
 
+    if rospy.has_param('~strategy'):
+        Globals.strategy = rospy.get_param('~strategy')
+
+    if rospy.has_param('~io'):
+        str_io = rospy.get_param('~io').split()
+        Globals.io = float(str_io[0]), float(str_io[1])
+
 
 def set_orientation(target_orientation_z):
-    # print("*** set_orientation to %d ***" % target_orientation_z)
     turn_toward(target_orientation_z)
-    # print "Done set_orientation."
 
 
 def get_linear_distance_from_slot(slot):

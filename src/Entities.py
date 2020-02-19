@@ -20,6 +20,14 @@ class Slot:
 
     def go_west(self):
         return Slot(self.row, self.col - 1)
+    def go_east(self):
+        return Slot(self.row, self.col + 1)
+
+    def go_north(self):
+        return Slot(self.row - 1, self.col)
+
+    def go_south(self):
+        return Slot(self.row + 1, self.col)
 
     def increase_cols(self):
         return Slot(self.row, self.col + 1)

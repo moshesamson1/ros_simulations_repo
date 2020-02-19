@@ -9,7 +9,8 @@
 	<arg name="robot_0_name" default="robot_0"/>
 	<arg name="robot_1_name" default="robot_1"/>
 	<arg name="seed" default="0"/>
-    	<param name="/use_sim_time" value="true" />  
+    	<param name="/use_sim_time" value="true" /> 
+	<arg name="0_strategy" default="MST"/> 
   	
 	<!-- Launch turtle bot world -->
 	<include file="$(find comp_cov_sim)/launch/world.launch">
@@ -21,5 +22,6 @@
 		<arg name="robot_0_name" value="$(arg robot_0_name)"/>
 		<arg name="robot_1_name" value="$(arg robot_1_name)"/>
 		<arg name="seed" value="$(arg seed)"/>
+		<arg name="0_strategy" value="$(arg 0_strategy)"/>
 	</include>
 </launch>

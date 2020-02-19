@@ -19,6 +19,8 @@ class Globals:
     is_finished = True
     status_pub = None
     is_terminating = False
+    strategy = "MST" # default is random mst
+    io=None
 
     def __init__(self):
         pass

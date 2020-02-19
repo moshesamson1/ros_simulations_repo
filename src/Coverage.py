@@ -341,3 +341,95 @@ def create_graph(edgelist):
         graph.setdefault(e1, []).append(e2)
         graph.setdefault(e2, []).append(e1)
     return graph
+
+def create_lcp(startLocation, endLocation):
+    steps=[]
+    # go to Io
+    steps.extend(go_from_a_to_b(Entities.Slot(startLocation[0], startLocation[1]), Entities.Slot(endLocation[0], endLocation[1])))
+    # go back to current location
+    steps.extend(cover_from_corner_outside(Entities.Slot(endLocation[0], endLocation[1])))
+    return steps
+
+def cover_from_corner_outside(start):
+    steps=[]
+    board_size=32
+    # cover semi-cyclic
+    current_slot = start
+    v_dir = 'u' if current_slot.row == board_size - 1 else 'd'
+    h_dir = 'r' if current_slot.col == board_size - 1 else 'l'
+    start_vertical = True
+    distance = 1
+    counter = 1
+
+    # initial horizontal step
+    current_slot = current_slot.go_west() if h_dir == 'r' else current_slot.go_east()
+    steps.append(current_slot)
+    counter += 1
+
+    while counter <= board_size * board_size and distance < board_size:
+        if start_vertical:
+            # going vertically
+            for _ in range(distance):
+                current_slot = current_slot.go_north() if v_dir == 'u' else current_slot.go_south()
+                steps.append(current_slot)
+                counter += 1
+
+            # going horizontally
+            for _ in range(distance):
+                current_slot = current_slot.go_west() if h_dir == 'l' else current_slot.go_east()
+                steps.append(current_slot)
+                counter += 1
+
+            # final vertical step
+            if counter < board_size * board_size:
+                current_slot = current_slot.go_north() if v_dir == 'u' else current_slot.go_south()
+                steps.append(current_slot)
+                counter += 1
+
+        else:
+            # going horizontally
+            for _ in range(distance):
+                current_slot = current_slot.go_west() if h_dir == 'l' else current_slot.go_east()
+                steps.append(current_slot)
+                counter += 1
+
+            # going vertically
+            for _ in range(distance):
+                current_slot = current_slot.go_north() if v_dir == 'u' else current_slot.go_south()
+                steps.append(current_slot)
+                counter += 1
+
+            # final horizontal step
+            if counter < board_size * board_size:
+                current_slot = current_slot.go_west() if h_dir == 'l' else current_slot.go_east()
+                steps.append(current_slot)
+                counter += 1
+
+        start_vertical = not start_vertical
+        h_dir = 'r' if h_dir == 'l' else 'l'
+        v_dir = 'u' if v_dir == 'd' else 'd'
+
+        distance += 1
+    return steps
+
+
+def go_from_a_to_b(a, b):
+    """
+    Returns a list of steps from A to B
+    :param a: First Slot
+    :param b: Second Slot
+    :return: list of steps from A to B
+    """
+
+    current_step = a
+    steps_to_return = [current_step]
+
+    while not current_step.row == b.row:
+        current_step = current_step.go_north() if b.row < a.row else current_step.go_south()
+        steps_to_return.append(current_step)
+
+    while not current_step.col == b.col:
+        current_step = current_step.go_east() if b.col > a.col else current_step.go_west()
+        steps_to_return.append(current_step)
+
+    return steps_to_return
